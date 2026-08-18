@@ -23,7 +23,7 @@ const CookDashboard = () => {
     try {
       setLoading(true);
       // getCookDetails API call using the logged-in user's ID
-      const response = await fetch(`http://localhost:5000/api/cooks/${user.id}`);
+      const response = await fetch(`https://homefeast-fullstack.onrender.com/api/cooks/${user.id}`);
       if (response.ok) {
         const data = await response.json();
         setMenuItems(data.menu || []);
@@ -45,7 +45,7 @@ const CookDashboard = () => {
   const handleAddDish = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/menu', {
+      const response = await fetch('https://homefeast-fullstack.onrender.com/api/menu', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

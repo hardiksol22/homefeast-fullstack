@@ -20,7 +20,7 @@ const ProviderDetails = () => {
   useEffect(() => {
     const fetchProviderDetails = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/cooks/${id}`);
+        const response = await fetch(`https://homefeast-fullstack.onrender.com/api/cooks/${id}`);
         if (!response.ok) throw new Error('Failed to fetch provider details');
         
         const data = await response.json();
@@ -61,7 +61,7 @@ const ProviderDetails = () => {
     try {
       setIsOrdering(true);
       
-      const response = await fetch('http://localhost:5000/api/orders', {
+      const response = await fetch('https://homefeast-fullstack.onrender.com/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

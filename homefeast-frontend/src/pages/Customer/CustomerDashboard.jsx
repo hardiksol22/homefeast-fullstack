@@ -15,7 +15,7 @@ const CustomerDashboard = () => {
   useEffect(() => {
     const fetchCooks = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/cooks');
+        const response = await fetch('https://homefeast-fullstack.onrender.com/api/cooks');
         if (!response.ok) throw new Error('Failed to fetch data');
         const data = await response.json();
         setProviders(data);

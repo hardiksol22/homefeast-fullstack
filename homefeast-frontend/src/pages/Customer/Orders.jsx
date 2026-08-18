@@ -17,7 +17,7 @@ const Orders = () => {
 
     const fetchOrders = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/orders/my-orders', {
+        const response = await fetch('https://homefeast-fullstack.onrender.com/api/orders/my-orders', {
           headers: {
             'Authorization': `Bearer ${user.token}`
           }
