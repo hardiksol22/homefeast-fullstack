@@ -1,244 +1,351 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const CookDashboard = () => {
-  const { user } = useAuth(); // Logged-in user ki details aur token
-  const [activeTab, setActiveTab] = useState('menu');
+  const { user } = useAuth();
   
-  // Real Data States
+  const [activeTab, setActiveTab] = useState('overview'); 
   const [menuItems, setMenuItems] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
 
-  // New Dish Form State
-  const [newDish, setNewDish] = useState({
-    dishName: '',
-    price: '',
-    mealType: 'Pure Veg', // Backend Enum matches: 'Pure Veg', 'Non-Veg', 'Vegan'
-    planType: 'Daily'     // Backend Enum matches: 'Daily', 'Weekly', 'Monthly'
+  const [formData, setFormData] = useState({
+    dishName: '', price: '', description: '', mealType: 'Pure Veg', planType: 'Daily', image: '' 
   });
 
-  // 1. Fetch Cook's Real Menu from Database
-  const fetchMyMenu = async () => {
-    try {
-      setLoading(true);
-      // getCookDetails API call using the logged-in user's ID
-      const response = await fetch(`https://homefeast-fullstack.onrender.com/api/cooks/${user.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setMenuItems(data.menu || []);
-      }
-    } catch (error) {
-      console.error("Error fetching menu:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 🟢 1. FETCH REAL DATA ON LOAD (Menu & Orders)
   useEffect(() => {
-    if (user?.id) {
-      fetchMyMenu();
-    }
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        const token = user?.token || localStorage.getItem('token');
+        
+        // Fetch Menu Items from Backend
+        const menuRes = await fetch('http://localhost:5000/api/menu/my-menu', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (menuRes.ok) {
+          const menuData = await menuRes.json();
+          setMenuItems(Array.isArray(menuData) ? menuData : []);
+        }
+
+        // Fetch Orders from Backend
+        const ordersRes = await fetch('http://localhost:5000/api/orders/my-orders', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (ordersRes.ok) {
+          const ordersData = await ordersRes.json();
+          setOrders(Array.isArray(ordersData) ? ordersData : []);
+        }
+      } catch (err) {
+        toast.error("Failed to fetch real data. Is backend running?");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) fetchDashboardData();
   }, [user]);
 
-  // 2. Add New Dish to Database
-  const handleAddDish = async (e) => {
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // 🟢 2. ADD REAL ITEM TO DATABASE
+  const handleAddItem = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('https://homefeast-fullstack.onrender.com/api/menu', {
+      const response = await fetch('http://localhost:5000/api/menu', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}` // Security Guard (Middleware) ke liye token
+          'Authorization': `Bearer ${user.token || localStorage.getItem('token')}` 
         },
-        body: JSON.stringify({
-          ...newDish,
-          price: Number(newDish.price) // Price ko number mein convert kiya
-        }),
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
-        // Form hide karein, reset karein, aur naya menu fetch karein
+        const newItem = await response.json();
+        toast.success("Dish published live!");
+        setMenuItems([...menuItems, newItem.menuItem || newItem]); // Update UI instantly
         setShowAddForm(false);
-        setNewDish({ dishName: '', price: '', mealType: 'Pure Veg', planType: 'Daily' });
-        fetchMyMenu();
+        setFormData({ dishName: '', price: '', description: '', mealType: 'Pure Veg', planType: 'Daily', image: '' });
       } else {
-        alert("Failed to add dish. Please try again.");
+        const errorData = await response.json();
+        toast.error(errorData.message || "Failed to add dish.");
       }
-    } catch (error) {
-      console.error("Error adding dish:", error);
+    } catch (err) {
+      toast.error("Server connection error!");
     }
   };
 
-  // Handle Input Changes for Add Form
-  const handleChange = (e) => {
-    setNewDish({ ...newDish, [e.target.name]: e.target.value });
+  // 🟢 3. DELETE REAL ITEM FROM DATABASE
+  const handleDeleteItem = async (id) => {
+    if(!window.confirm("Are you sure you want to delete this dish?")) return;
+    
+    try {
+      const response = await fetch(`http://localhost:5000/api/menu/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${user.token || localStorage.getItem('token')}` }
+      });
+
+      if (response.ok) {
+        toast.success("Dish deleted successfully!");
+        setMenuItems(menuItems.filter(item => item._id !== id)); // Remove from UI
+      } else {
+        toast.error("Failed to delete dish");
+      }
+    } catch (err) {
+      toast.error("Server connection error!");
+    }
   };
 
+  // 🟢 4. UPDATE REAL ORDER STATUS
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token || localStorage.getItem('token')}` 
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        toast.success(`Order marked as ${newStatus}!`);
+        // Update local state instantly
+        setOrders(orders.map(order => order._id === orderId ? { ...order, status: newStatus } : order));
+      } else {
+        toast.error("Failed to update order status");
+      }
+    } catch (err) {
+      toast.error("Server connection error!");
+    }
+  };
+
+  // 🟢 5. REAL DYNAMIC CALCULATIONS FOR OVERVIEW TAB
+  const activeOrders = orders.filter(o => o.status === 'Pending' || o.status === 'Preparing');
+  const completedOrders = orders.filter(o => o.status === 'Delivered' || o.status === 'Completed');
+  // Total Earning unhi orders ki hogi jo complete ho gaye hain
+  const totalRevenue = completedOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#080D12] flex justify-center items-center">
+        <div className="w-12 h-12 border-4 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] py-10">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] pt-48 pb-20">
+      <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl md:text-4xl font-black tracking-tight text-[#F8FAFC]">
-                Welcome, <span className="text-[#10B981]">{user?.name?.split(' ')[0] || 'Chef'}</span>
-              </h1>
-              <span className="bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide flex items-center gap-1">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Verified Cook
-              </span>
+        {/* HEADER */}
+        <div className="bg-[#111827] border border-[#263241] rounded-3xl p-8 mb-8 flex flex-col md:flex-row items-center justify-between shadow-[0_10px_40px_rgba(0,0,0,0.5)] relative overflow-hidden">
+          <div className="absolute -top-20 -right-20 w-80 h-80 bg-[#10B981]/10 rounded-full blur-[100px] pointer-events-none"></div>
+          
+          <div className="relative z-10 flex items-center gap-6 w-full md:w-auto">
+            <div className="relative">
+              <div className="w-20 h-20 bg-gradient-to-br from-[#10B981] to-[#059669] rounded-2xl flex items-center justify-center text-4xl shadow-lg transform rotate-3">
+                👨‍🍳
+              </div>
+              <div className="absolute -bottom-2 -right-2 bg-[#F4B942] text-[#080D12] text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">Pro</div>
             </div>
-            <p className="text-[#94A3B8] text-sm">Manage your menu, subscriptions, and daily deliveries.</p>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30 px-2 py-1 rounded uppercase font-bold tracking-widest">Kitchen Admin</span>
+                <span className="flex items-center gap-1 text-[10px] text-[#94A3B8] font-bold"><span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span> Online</span>
+              </div>
+              <h1 className="text-3xl font-black text-[#F8FAFC]">Hello, <span className="text-[#10B981]">{user?.name?.split(' ')[0] || 'Chef'}</span></h1>
+            </div>
           </div>
-          <button 
-            onClick={() => {
-              setActiveTab('menu');
-              setShowAddForm(!showAddForm);
-            }}
-            className="px-5 py-2.5 bg-[#10B981] hover:bg-[#059669] text-[#080D12] font-bold rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-colors text-sm"
-          >
-            {showAddForm ? 'Cancel Adding' : '+ Add New Dish'}
+
+          <button onClick={() => { setActiveTab('menu'); setShowAddForm(true); }} className="mt-6 md:mt-0 w-full md:w-auto px-6 py-3 bg-[#10B981] hover:bg-[#059669] text-[#080D12] font-black rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:-translate-y-1 z-10 flex items-center justify-center gap-2">
+            + Add New Dish
           </button>
         </div>
 
-        {/* Dashboard Tabs */}
-        <div className="flex overflow-x-auto border-b border-[#263241] mb-8 hide-scrollbar">
+        {/* TABS */}
+        <div className="flex border-b border-[#263241] mb-8 overflow-x-auto custom-scrollbar">
           {['overview', 'menu', 'orders'].map((tab) => (
             <button 
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-4 px-6 text-sm font-bold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                activeTab === tab 
-                  ? 'text-[#10B981] border-b-2 border-[#10B981]' 
-                  : 'text-[#64748B] hover:text-[#94A3B8]'
-              }`}
+              className={`pb-4 px-6 text-sm font-black uppercase tracking-wider whitespace-nowrap transition-all duration-300 relative ${activeTab === tab ? 'text-[#10B981]' : 'text-[#64748B] hover:text-[#94A3B8]'}`}
             >
-              {tab}
+              {tab === 'overview' ? '📊 Dashboard Overview' : tab === 'menu' ? '🍔 Manage Menu' : '🔔 Live Orders'}
+              {activeTab === tab && <span className="absolute bottom-0 left-0 w-full h-1 bg-[#10B981] rounded-t-full"></span>}
             </button>
           ))}
         </div>
 
-        {/* --- TAB CONTENT --- */}
-        <div className="min-h-[500px]">
-          
-          {/* 1. OVERVIEW TAB (Dummy Data for now) */}
-          {activeTab === 'overview' && (
-            <div className="animate-fade-in space-y-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Total Earnings Card */}
-                <div className="bg-[#111827] border border-[#263241] p-6 rounded-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-[#10B981]/5 rounded-full blur-2xl"></div>
-                  <p className="text-[#94A3B8] text-xs font-bold uppercase tracking-wider mb-2">Total Earnings</p>
-                  <h3 className="text-3xl font-black text-[#F8FAFC]">₹0</h3>
-                  <p className="text-[#10B981] text-xs mt-2">Just starting out!</p>
-                </div>
-                {/* Menu Items Card */}
-                <div className="bg-[#111827] border border-[#263241] p-6 rounded-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-[#3B82F6]/5 rounded-full blur-2xl"></div>
-                  <p className="text-[#94A3B8] text-xs font-bold uppercase tracking-wider mb-2">Dishes in Menu</p>
-                  <h3 className="text-3xl font-black text-[#F8FAFC]">{menuItems.length}</h3>
-                  <p className="text-[#94A3B8] text-xs mt-2">Active items</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 2. MENU TAB (REAL DATA) */}
-          {activeTab === 'menu' && (
-            <div className="animate-fade-in">
+        {/* =========================================
+            TAB 1: REAL OVERVIEW (ANALYTICS)
+        ========================================== */}
+        {activeTab === 'overview' && (
+          <div className="space-y-8 animate-fade-in-up">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               
-              {/* Add New Dish Form (Toggleable) */}
-              {showAddForm && (
-                <div className="bg-[#111827] border border-[#10B981]/30 p-6 rounded-2xl shadow-[0_0_15px_rgba(16,185,129,0.05)] mb-8">
-                  <h3 className="text-lg font-bold text-[#F8FAFC] mb-4">Add a New Dish to Your Menu</h3>
-                  <form onSubmit={handleAddDish} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2 ml-1">Dish Name</label>
-                      <input type="text" name="dishName" value={newDish.dishName} onChange={handleChange} required placeholder="e.g. Punjabi Deluxe Thali" className="w-full px-4 py-2.5 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] text-sm focus:outline-none focus:border-[#10B981]" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2 ml-1">Price (₹)</label>
-                      <input type="number" name="price" value={newDish.price} onChange={handleChange} required placeholder="e.g. 150" className="w-full px-4 py-2.5 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] text-sm focus:outline-none focus:border-[#10B981]" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2 ml-1">Meal Type</label>
-                      <select name="mealType" value={newDish.mealType} onChange={handleChange} className="w-full px-4 py-2.5 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] text-sm focus:outline-none focus:border-[#10B981]">
-                        <option value="Pure Veg">Pure Veg</option>
-                        <option value="Non-Veg">Non-Veg</option>
-                        <option value="Vegan">Vegan</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2 ml-1">Plan Type</label>
-                      <select name="planType" value={newDish.planType} onChange={handleChange} className="w-full px-4 py-2.5 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] text-sm focus:outline-none focus:border-[#10B981]">
-                        <option value="Daily">Daily</option>
-                        <option value="Weekly">Weekly</option>
-                        <option value="Monthly">Monthly</option>
-                      </select>
-                    </div>
-                    <div className="md:col-span-2 mt-2">
-                      <button type="submit" className="px-6 py-2.5 bg-[#10B981] hover:bg-[#059669] text-[#080D12] font-bold rounded-xl transition-colors">
-                        Save Dish
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-
-              {/* Menu List Table */}
-              <div className="bg-[#111827] border border-[#263241] rounded-2xl overflow-hidden">
-                {loading ? (
-                  <div className="p-8 text-center text-[#94A3B8]">Loading menu...</div>
-                ) : menuItems.length === 0 ? (
-                  <div className="p-8 text-center text-[#94A3B8]">Your menu is empty. Click "+ Add New Dish" to get started!</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-[#080D12] border-b border-[#263241]">
-                          <th className="p-4 text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Dish Name</th>
-                          <th className="p-4 text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Type & Plan</th>
-                          <th className="p-4 text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Price</th>
-                          <th className="p-4 text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#263241]">
-                        {menuItems.map(item => (
-                          <tr key={item._id} className="hover:bg-[#080D12]/50 transition-colors">
-                            <td className="p-4 font-bold text-[#F8FAFC]">{item.dishName}</td>
-                            <td className="p-4 flex gap-2">
-                              <span className="text-[10px] font-bold bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 px-2 py-1 rounded">{item.mealType}</span>
-                              <span className="text-[10px] font-bold bg-[#263241] text-[#94A3B8] px-2 py-1 rounded">{item.planType}</span>
-                            </td>
-                            <td className="p-4 text-[#10B981] font-bold">₹{item.price}</td>
-                            <td className="p-4">
-                              <span className={`text-xs font-black uppercase tracking-wider ${item.isAvailable ? 'text-[#10B981]' : 'text-rose-500'}`}>
-                                {item.isAvailable ? 'Available' : 'Out of Stock'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+              <div className="bg-[#111827] border border-[#263241] p-6 rounded-3xl relative overflow-hidden group hover:border-[#10B981]/50 transition-colors">
+                <div className="absolute -right-4 -top-4 text-6xl opacity-5 group-hover:scale-110 transition-transform">💰</div>
+                <p className="text-[#94A3B8] text-sm font-bold uppercase tracking-wider mb-2">Total Revenue</p>
+                <h3 className="text-3xl font-black text-[#F8FAFC]">₹{totalRevenue}</h3>
+                <p className="text-xs text-[#10B981] mt-2 font-bold">Lifetime earnings</p>
               </div>
-            </div>
-          )}
 
-          {/* 3. ORDERS TAB */}
-          {activeTab === 'orders' && (
-            <div className="animate-fade-in p-8 text-center bg-[#111827] border border-[#263241] rounded-2xl text-[#94A3B8]">
-              You have no active orders right now. Add dishes to your menu to start receiving subscriptions!
-            </div>
-          )}
+              <div className="bg-[#111827] border border-[#263241] p-6 rounded-3xl relative overflow-hidden group hover:border-[#3B82F6]/50 transition-colors">
+                <div className="absolute -right-4 -top-4 text-6xl opacity-5 group-hover:scale-110 transition-transform">📦</div>
+                <p className="text-[#94A3B8] text-sm font-bold uppercase tracking-wider mb-2">Active Orders</p>
+                <h3 className="text-3xl font-black text-[#F8FAFC]">{activeOrders.length}</h3>
+                <p className="text-xs text-[#3B82F6] mt-2 font-bold">Needs preparation</p>
+              </div>
 
-        </div>
+              <div className="bg-[#111827] border border-[#263241] p-6 rounded-3xl relative overflow-hidden group hover:border-[#F4B942]/50 transition-colors">
+                <div className="absolute -right-4 -top-4 text-6xl opacity-5 group-hover:scale-110 transition-transform">✅</div>
+                <p className="text-[#94A3B8] text-sm font-bold uppercase tracking-wider mb-2">Completed Orders</p>
+                <h3 className="text-3xl font-black text-[#F8FAFC]">{completedOrders.length}</h3>
+                <p className="text-xs text-[#F4B942] mt-2 font-bold">Successfully delivered</p>
+              </div>
+
+              <div className="bg-[#111827] border border-[#263241] p-6 rounded-3xl relative overflow-hidden group hover:border-[#8B5CF6]/50 transition-colors">
+                <div className="absolute -right-4 -top-4 text-6xl opacity-5 group-hover:scale-110 transition-transform">🍲</div>
+                <p className="text-[#94A3B8] text-sm font-bold uppercase tracking-wider mb-2">Menu Items</p>
+                <h3 className="text-3xl font-black text-[#F8FAFC]">{menuItems.length}</h3>
+                <p className="text-xs text-[#8B5CF6] mt-2 font-bold">Live on platform</p>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* =========================================
+            TAB 2: REAL MANAGE MENU (ADD/DELETE)
+        ========================================== */}
+        {activeTab === 'menu' && (
+          <div className="animate-fade-in-up">
+            {showAddForm && (
+              <div className="bg-[#111827] border border-[#10B981]/30 rounded-3xl p-6 sm:p-8 mb-10 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-[#10B981]">Add New Dish</h2>
+                  <button onClick={() => setShowAddForm(false)} className="text-[#64748B] hover:text-rose-500 font-bold text-sm bg-[#080D12] px-3 py-1.5 rounded-lg border border-[#263241]">Close</button>
+                </div>
+                <form onSubmit={handleAddItem} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Dish Name</label>
+                      <input type="text" name="dishName" required value={formData.dishName} onChange={handleInputChange} className="w-full px-4 py-3 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:border-[#10B981] focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Price (₹)</label>
+                      <input type="number" name="price" required value={formData.price} onChange={handleInputChange} className="w-full px-4 py-3 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:border-[#10B981] focus:outline-none" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Description</label>
+                    <textarea name="description" required rows="3" value={formData.description} onChange={handleInputChange} className="w-full px-4 py-3 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:border-[#10B981] focus:outline-none resize-none"></textarea>
+                  </div>
+                  <div>
+                     <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Image URL (Optional)</label>
+                     <input type="text" name="image" value={formData.image} onChange={handleInputChange} placeholder="https://..." className="w-full px-4 py-3 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:border-[#10B981] focus:outline-none" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Meal Type</label>
+                      <select name="mealType" value={formData.mealType} onChange={handleInputChange} className="w-full px-4 py-3 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:border-[#10B981] focus:outline-none">
+                        <option value="Pure Veg">🌿 Pure Veg</option>
+                        <option value="Non-Veg">🍗 Non-Veg</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Plan Type</label>
+                      <select name="planType" value={formData.planType} onChange={handleInputChange} className="w-full px-4 py-3 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:border-[#10B981] focus:outline-none">
+                        <option value="Daily">Daily Plan</option>
+                        <option value="Weekly">Weekly Plan</option>
+                        <option value="Monthly">Monthly Plan</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button type="submit" className="w-full px-10 py-4 bg-[#10B981] text-[#080D12] font-black rounded-xl hover:bg-[#059669] transition-all">Publish Dish</button>
+                </form>
+              </div>
+            )}
+
+            <div className="flex justify-between items-end mb-6">
+              <h2 className="text-2xl font-bold text-[#F8FAFC]">Your Live Menu</h2>
+              {!showAddForm && <button onClick={() => setShowAddForm(true)} className="text-sm font-bold text-[#10B981] hover:underline">+ Add New</button>}
+            </div>
+            
+            {menuItems.length === 0 ? (
+              <div className="bg-[#111827] border border-[#263241] border-dashed rounded-3xl p-16 text-center">
+                <span className="text-6xl mb-4 block opacity-50">🍽️</span>
+                <h3 className="text-xl font-bold text-[#F8FAFC] mb-2">Menu is Empty</h3>
+                <p className="text-[#94A3B8] mb-6">Start building your menu to get orders.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {menuItems.map((item) => (
+                  <div key={item._id} className="bg-[#111827] border border-[#263241] rounded-3xl overflow-hidden shadow-lg flex flex-col">
+                    <div className="relative h-48 overflow-hidden bg-[#1E293B]">
+                      <img src={item.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"} alt={item.dishName} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="p-5 flex-1 flex flex-col">
+                      <h3 className="text-xl font-bold text-[#F8FAFC] mb-1">{item.dishName}</h3>
+                      <p className="text-sm text-[#94A3B8] line-clamp-2 mb-4">{item.description}</p>
+                      <div className="mt-auto flex justify-between items-center border-t border-[#263241] pt-4">
+                        <span className="text-2xl font-black text-[#F8FAFC]">₹{item.price}</span>
+                        {/* 🟢 REAL DELETE BUTTON */}
+                        <button onClick={() => handleDeleteItem(item._id)} className="text-rose-500 font-bold hover:underline text-sm">
+                          Remove Dish
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* =========================================
+            TAB 3: REAL LIVE ORDERS
+        ========================================== */}
+        {activeTab === 'orders' && (
+          <div className="animate-fade-in-up space-y-4">
+            {orders.length === 0 ? (
+               <div className="bg-[#111827] border border-[#263241] rounded-3xl p-16 text-center">
+                 <h3 className="text-xl font-bold text-[#F8FAFC] mb-2">No Orders Yet</h3>
+                 <p className="text-[#94A3B8]">When customers buy your food, orders will appear here.</p>
+               </div>
+            ) : (
+               orders.map((order) => (
+                <div key={order._id} className="bg-[#111827] border border-[#263241] rounded-2xl p-5 flex flex-col md:flex-row justify-between gap-4">
+                  <div>
+                    <h4 className="text-lg font-bold text-[#F8FAFC]">Order ID: {order._id.substring(0, 8)}</h4>
+                    <p className="text-sm text-[#94A3B8] font-bold mt-1">Status: <span className={order.status === 'Completed' ? 'text-[#10B981]' : 'text-[#F4B942]'}>{order.status}</span></p>
+                  </div>
+                  <div className="flex flex-col md:flex-row items-center gap-4">
+                    <p className="text-xl font-black text-[#F8FAFC]">₹{order.totalAmount}</p>
+                    {/* 🟢 REAL STATUS UPDATE BUTTONS */}
+                    {order.status === 'Pending' && (
+                      <div className="flex gap-2">
+                        <button onClick={() => handleUpdateOrderStatus(order._id, 'Rejected')} className="px-4 py-2 bg-rose-500/10 text-rose-500 font-bold rounded-lg hover:bg-rose-500 hover:text-white">Reject</button>
+                        <button onClick={() => handleUpdateOrderStatus(order._id, 'Preparing')} className="px-4 py-2 bg-[#10B981] text-[#080D12] font-black rounded-lg">Accept & Prepare</button>
+                      </div>
+                    )}
+                    {order.status === 'Preparing' && (
+                      <button onClick={() => handleUpdateOrderStatus(order._id, 'Completed')} className="px-4 py-2 bg-blue-500 text-white font-black rounded-lg">Mark Completed</button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );

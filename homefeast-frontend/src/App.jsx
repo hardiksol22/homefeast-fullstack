@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext'; // 🛒 Cart Context yahan hai
+import { Toaster } from 'react-hot-toast';
 
 // Components
 import Navbar from './components/Navbar';
@@ -18,63 +20,84 @@ import Wishlist from './pages/Customer/Wishlist';
 import CookDashboard from './pages/Cook/CookDashboard';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import NotFound from './pages/NotFound';
-import Categories from './pages/Customer/Categories';
 import Chefs from './pages/Customer/Chefs';
 import Offers from './pages/Customer/Offers';
 
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] flex flex-col font-sans">
-          
-          <Navbar />
+      <CartProvider>
+        <Router>
+          {/* 🍞 Premium Dark Theme Toaster */}
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: '#111827',
+                color: '#F8FAFC',
+                border: '1px solid #263241',
+                borderRadius: '12px',
+              },
+              success: {
+                iconTheme: { primary: '#10B981', secondary: '#080D12' },
+              },
+              error: {
+                iconTheme: { primary: '#F43F5E', secondary: '#080D12' },
+              },
+            }}
+          />
 
-          {/* Dynamic Route Content */}
-          <main className="flex-1">
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              
-              {/* Open Customer Routes (Discovery can be public) */}
-              <Route path="/customer" element={<CustomerDashboard />} />
-              <Route path="/provider/:id" element={<ProviderDetails />} />
-              
-              {/* Protected Customer Routes (Requires Login) */}
-              <Route path="/cart" element={
-                <ProtectedRoute><Cart /></ProtectedRoute>
-              } />
-              <Route path="/orders" element={
-                <ProtectedRoute><Orders /></ProtectedRoute>
-              } />
-              <Route path="/wishlist" element={
-                <ProtectedRoute><Wishlist /></ProtectedRoute>
-              } />
-              
-              {/* Protected Cook Routes */}
-              <Route path="/cook" element={
-                <ProtectedRoute allowedRole="cook"><CookDashboard /></ProtectedRoute>
-              } />
-              
-              {/* Protected Admin Routes */}
-              <Route path="/admin" element={
-                <ProtectedRoute allowedRole="admin"><AdminDashboard /></ProtectedRoute>
-              } />
+          <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] flex flex-col font-sans">
+            
+            <Navbar />
 
-              {/* Catch-all 404 Route (Must be at the very end) */}
-              <Route path="*" element={<NotFound />} />
-              <Route path="/categories" element={<Categories />} />
-              <Route path="/chefs" element={<Chefs />} />
-              <Route path="/offers" element={<Offers />} />
-            </Routes>
-          </main>
+            {/* Dynamic Route Content */}
+            <main className="flex-1">
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                
+                {/* Open Customer Routes */}
+                <Route path="/explore" element={<CustomerDashboard />} />
+                <Route path="/customer" element={<CustomerDashboard />} />
+                
+                <Route path="/provider/:id" element={<ProviderDetails />} />
+                <Route path="/chefs" element={<Chefs />} />
+                <Route path="/offers" element={<Offers />} />
+                
+                {/* Protected Customer Routes (Requires Login) */}
+                <Route path="/cart" element={
+                  <ProtectedRoute><Cart /></ProtectedRoute>
+                } />
+                <Route path="/orders" element={
+                  <ProtectedRoute><Orders /></ProtectedRoute>
+                } />
+                <Route path="/wishlist" element={
+                  <ProtectedRoute><Wishlist /></ProtectedRoute>
+                } />
+                
+                {/* Protected Cook Routes */}
+                <Route path="/cook" element={
+                  <ProtectedRoute allowedRole="cook"><CookDashboard /></ProtectedRoute>
+                } />
+                
+                {/* Protected Admin Routes */}
+                <Route path="/admin" element={
+                  <ProtectedRoute allowedRole="admin"><AdminDashboard /></ProtectedRoute>
+                } />
 
-          <Footer />
-          
-        </div>
-      </Router>
+                {/* Catch-all 404 Route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </main>
+
+            <Footer />
+            
+          </div>
+        </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }
