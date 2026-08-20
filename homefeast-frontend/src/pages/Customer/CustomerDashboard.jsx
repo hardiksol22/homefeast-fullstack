@@ -17,7 +17,7 @@ const CustomerDashboard = () => {
       setLoading(true);
       setError(null);
       try {
-        // 🟢 REAL LIVE BACKEND URL
+        // 🟢 ONLY REAL DATA FROM LIVE BACKEND
         const response = await fetch('https://homefeast-fullstack.onrender.com/api/cooks');
         
         if (!response.ok) {
