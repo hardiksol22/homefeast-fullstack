@@ -17,7 +17,6 @@ const CustomerDashboard = () => {
       setLoading(true);
       setError(null);
       try {
-        // 🟢 100% REAL LIVE BACKEND URL
         const response = await fetch('https://homefeast-fullstack.onrender.com/api/cooks');
         
         if (!response.ok) {
@@ -26,7 +25,6 @@ const CustomerDashboard = () => {
         
         const data = await response.json();
         
-        // Ensure data is array before setting
         if (Array.isArray(data)) {
           setProviders(data);
         } else {
@@ -44,7 +42,6 @@ const CustomerDashboard = () => {
     fetchCooks();
   }, []);
 
-  // 🟢 REAL FILTERING LOGIC
   const filteredProviders = providers.filter(provider => {
     const kitchen = provider?.kitchenName || "";
     const cuisine = provider?.cuisine || "";
@@ -81,7 +78,6 @@ const CustomerDashboard = () => {
         
         {/* Header Section */}
         <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6 relative">
-          
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#10B981]/10 border border-[#10B981]/20 mb-4">
               <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
@@ -102,7 +98,7 @@ const CustomerDashboard = () => {
           )}
         </div>
 
-        {/* 🎛️ Search & Filter Bar (Sticky) */}
+        {/* Search & Filter Bar */}
         <div className="bg-[#111827]/90 backdrop-blur-xl p-5 rounded-3xl border border-[#263241] shadow-[0_10px_30px_rgba(0,0,0,0.5)] mb-12 sticky top-24 z-30 transition-all">
           <div className="relative mb-4">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -159,7 +155,6 @@ const CustomerDashboard = () => {
                   <div key={provider._id} className="bg-[#111827] border border-[#263241] rounded-3xl overflow-hidden group flex flex-col hover:border-[#10B981]/50 hover:shadow-[0_10px_40px_rgba(16,185,129,0.12)] transition-all duration-300 transform hover:-translate-y-1">
                     
                     <div className="relative h-52 w-full bg-[#1E293B] overflow-hidden">
-                      {/* Live Server Images Fallback */}
                       <img 
                         src={provider.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80"} 
                         alt={provider.kitchenName} 
@@ -167,7 +162,6 @@ const CustomerDashboard = () => {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#111827] via-transparent to-transparent"></div>
                       
-                      {/* Premium Badge */}
                       <div className="absolute top-4 right-4 bg-[#080D12]/80 backdrop-blur-md border border-[#F4B942]/30 px-3 py-1.5 rounded-full flex items-center gap-1.5">
                         <span className="text-[#F4B942] text-xs">⭐</span>
                         <span className="text-[#F8FAFC] text-xs font-bold">{provider.rating || 'New'}</span>
@@ -208,18 +202,16 @@ const CustomerDashboard = () => {
                 ))}
               </div>
             ) : (
+              // 🟢 YAHAN FIX KIYA HAI: Ab 'Register' ki jagah ek proper message aayega!
               <div className="w-full text-center py-24 bg-[#111827] border border-[#263241] rounded-3xl mt-4 shadow-xl">
                 <span className="text-7xl block mb-6 opacity-80">🍽️</span>
                 <h3 className="text-3xl font-black text-[#F8FAFC]">No Kitchens Found</h3>
                 {searchTerm || cuisineFilter !== "All" ? (
-                  <p className="text-[#94A3B8] mt-3 text-lg">No cooks match your current filters. Try clearing them.</p>
+                  <p className="text-[#94A3B8] mt-3 text-lg">No kitchens match your current filters. Try clearing the search or filters.</p>
                 ) : (
-                  <>
-                    <p className="text-[#94A3B8] mt-3 text-lg mb-8">Be the very first cook on the platform and start getting orders today!</p>
-                    <Link to="/register" className="px-8 py-4 bg-[#10B981] text-[#080D12] font-black rounded-xl hover:bg-[#059669] transition-colors text-lg shadow-lg">
-                      Register as a Cook
-                    </Link>
-                  </>
+                  <p className="text-[#94A3B8] mt-3 text-lg mb-8 max-w-xl mx-auto">
+                    We are currently expanding our services in your area. New home kitchens and chefs will be added here very soon. Stay tuned!
+                  </p>
                 )}
               </div>
             )}
