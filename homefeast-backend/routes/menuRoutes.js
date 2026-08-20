@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { addMenuItem, updateMenuItem, deleteMenuItem } = require('../controllers/menuController');
-const { protect, isCook } = require('../middleware/authMiddleware');
+const { addMenuItem, getMyMenu, getProviderMenu } = require('../controllers/menuController');
+const { protect } = require('../middleware/authMiddleware');
+const upload = require('../middleware/uploadMiddleware'); // <--- 1. UPLOAD MIDDLEWARE IMPORT KIYA
 
-// Sabhi routes par security guards (protect aur isCook) lagaye gaye hain
-router.post('/', protect, isCook, addMenuItem);          // ADD
-router.put('/:id', protect, isCook, updateMenuItem);     // UPDATE
-router.delete('/:id', protect, isCook, deleteMenuItem);  // DELETE
+// 2. Route mein 'upload.single("image")' add kiya
+router.post('/', protect, upload.single('image'), addMenuItem); 
+
+router.get('/my-menu', protect, getMyMenu);
+router.get('/:cookId', getProviderMenu);
 
 module.exports = router;

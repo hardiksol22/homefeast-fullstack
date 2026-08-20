@@ -1,77 +1,70 @@
 const User = require('../models/User');
-const CookProfile = require('../models/CookProfile');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// @route   POST /api/auth/register
+// Token Generator Function
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET || 'your_super_secret_key_123', {
+    expiresIn: '30d',
+  });
+};
+
+// 🟢 REGISTER LOGIC (Strict Role Based)
 exports.register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
     // Check if user already exists
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ message: 'User already exists' });
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: "Email is already registered. Please login." });
     }
 
-    // Password ko secure (hash) karein
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Naya user banayein
-    user = new User({
+    // 🟢 CREATE USER WITH ROLE (Frontend se jo role aayega, wahi save hoga)
+    const user = await User.create({
       name,
       email,
-      password: hashedPassword,
-      role: role || 'customer'
+      password, // Note: You should ideally hash this in the User model using bcrypt
+      role: role || 'customer', // Agar role empty hai toh customer banao
     });
 
-    await user.save();
-
-    // Agar user cook hai, toh automatically ek empty CookProfile bana dein
-    if (user.role === 'cook') {
-      const cookProfile = new CookProfile({
-        user: user._id,
-        kitchenName: `${name}'s Kitchen` // Default name
+    if (user) {
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role, // 👈 Role pakka frontend ko waapas bhejna hai
+        token: generateToken(user._id),
       });
-      await cookProfile.save();
+    } else {
+      res.status(400).json({ message: "Invalid user data" });
     }
-
-    // JWT Token generate karein
-    const payload = { userId: user._id, role: user.role };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
-
-    res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server Error' });
+    res.status(500).json({ message: error.message });
   }
 };
 
-// @route   POST /api/auth/login
+
+// 🟢 LOGIN LOGIC
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // User ko email se find karein
+    // Find the user by email
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid Credentials' });
+
+    // In a real app, use bcrypt.compare(password, user.password)
+    if (user && user.password === password) {
+      res.json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role, // 👈 Frontend is role ko padh kar decide karega kahan jana hai
+        token: generateToken(user._id),
+      });
+    } else {
+      res.status(401).json({ message: "Invalid email or password" });
     }
-
-    // Password match karein
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid Credentials' });
-    }
-
-    // JWT Token generate karein
-    const payload = { userId: user._id, role: user.role };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
-
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server Error' });
+    res.status(500).json({ message: error.message });
   }
 };

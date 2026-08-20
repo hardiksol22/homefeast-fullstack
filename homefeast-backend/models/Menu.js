@@ -16,17 +16,20 @@ const menuSchema = new mongoose.Schema({
   },
   mealType: { 
     type: String, 
-    enum: ['Pure Veg', 'Non-Veg', 'Vegan'], 
-    required: true 
+    enum: ['Pure Veg', 'Non-Veg', 'Vegan'],
+    default: 'Pure Veg'
   },
-  planType: { 
-    type: String, 
-    enum: ['Daily', 'Weekly', 'Monthly'], 
-    default: 'Daily' 
+  planType: {
+    type: String,
+    enum: ['Daily', 'Weekly', 'Monthly'],
+    default: 'Daily'
   },
   isAvailable: { 
     type: Boolean, 
     default: true 
+  },
+  image: { 
+    type: String // <--- YEH NAYI LINE ADD KI HAI (Cloudinary URL save karne ke liye)
   }
 }, { timestamps: true });
 
