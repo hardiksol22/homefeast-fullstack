@@ -22,8 +22,6 @@ import AdminDashboard from './pages/Admin/AdminDashboard';
 import NotFound from './pages/NotFound';
 import Chefs from './pages/Customer/Chefs';
 import Offers from './pages/Customer/Offers';
-import Cart from './pages/Customer/Cart';
-import Wishlist from './pages/Customer/Wishlist';
 
 export default function App() {
   return (
