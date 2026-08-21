@@ -1,306 +1,215 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const CookDashboard = () => {
-  const { user } = useAuth();
-  
-  const [activeTab, setActiveTab] = useState('overview'); 
-  const [menuItems, setMenuItems] = useState([]);
-  const [orders, setOrders] = useState([]);
+  const navigate = useNavigate();
+  const [dishes, setDishes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [addingDish, setAddingDish] = useState(false);
+  
+  // Cook ki details LocalStorage se nikal rahe hain (Login ke baad save hoti hai)
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
 
   const [formData, setFormData] = useState({
-    dishName: '', price: '', description: '', mealType: 'Pure Veg', planType: 'Daily', image: '' 
+    name: '',
+    price: '',
+    description: '',
+    type: 'Veg',
+    image: ''
   });
 
-  // 🟢 1. FETCH REAL DATA ON LOAD (Menu & Orders)
+  // 1. 📡 FETCH COOK'S MENU FROM BACKEND
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      try {
-        const token = user?.token || localStorage.getItem('token');
-        
-        // Fetch Menu Items from Backend
-        const menuRes = await fetch('https://homefeast-fullstack.onrender.com/api/menu/my-menu', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (menuRes.ok) {
-          const menuData = await menuRes.json();
-          setMenuItems(Array.isArray(menuData) ? menuData : []);
-        }
+    if (!userInfo || userInfo.role !== 'cook') {
+      toast.error("Unauthorized! Please login as a Cook.");
+      navigate('/login');
+      return;
+    }
 
-        // Fetch Orders from Backend
-        const ordersRes = await fetch('https://homefeast-fullstack.onrender.com/api/orders/my-orders', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (ordersRes.ok) {
-          const ordersData = await ordersRes.json();
-          setOrders(Array.isArray(ordersData) ? ordersData : []);
+    const fetchMyMenu = async () => {
+      try {
+        const response = await fetch(`https://homefeast-fullstack.onrender.com/api/cooks/${userInfo._id}/menu`);
+        if (response.ok) {
+          const data = await response.json();
+          setDishes(data);
         }
-      } catch (err) {
-        toast.error("Failed to fetch real data. Is backend running?");
+      } catch (error) {
+        console.error("Failed to fetch menu:", error);
+        toast.error("Failed to load your menu.");
       } finally {
         setLoading(false);
       }
     };
 
-    if (user) fetchDashboardData();
-  }, [user]);
+    fetchMyMenu();
+  }, [navigate, userInfo]);
 
-  const handleInputChange = (e) => {
+  // 2. 📝 HANDLE FORM CHANGES
+  const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 🟢 2. ADD REAL ITEM TO DATABASE
-  const handleAddItem = async (e) => {
+  // 3. 🚀 ADD NEW DISH TO BACKEND
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setAddingDish(true);
+
     try {
-      const response = await fetch('https://homefeast-fullstack.onrender.com/api/menu', {
+      const response = await fetch('https://homefeast-fullstack.onrender.com/api/cooks/menu', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token || localStorage.getItem('token')}` 
+          'Authorization': `Bearer ${userInfo.token}` // 🔒 Secure Token
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData)
       });
 
-      if (response.ok) {
-        const newItem = await response.json();
-        toast.success("Dish published live!");
-        setMenuItems([...menuItems, newItem.menuItem || newItem]); // Update UI instantly
-        setShowAddForm(false);
-        setFormData({ dishName: '', price: '', description: '', mealType: 'Pure Veg', planType: 'Daily', image: '' });
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.message || "Failed to add dish.");
-      }
-    } catch (err) {
-      toast.error("Server connection error!");
-    }
-  };
-
-  // 🟢 3. DELETE REAL ITEM FROM DATABASE
-  const handleDeleteItem = async (id) => {
-    if(!window.confirm("Are you sure you want to delete this dish?")) return;
-    
-    try {
-      const response = await fetch(`https://homefeast-fullstack.onrender.com/api/menu/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${user.token || localStorage.getItem('token')}` }
-      });
+      const data = await response.json();
 
       if (response.ok) {
-        toast.success("Dish deleted successfully!");
-        setMenuItems(menuItems.filter(item => item._id !== id)); // Remove from UI
+        toast.success("Dish added to your menu! 🍲", {
+          style: { background: '#10B981', color: '#080D12' }
+        });
+        // Nayi dish ko bina refresh kiye list me add kar do
+        setDishes([data, ...dishes]);
+        // Form clear kar do
+        setFormData({ name: '', price: '', description: '', type: 'Veg', image: '' });
       } else {
-        toast.error("Failed to delete dish");
+        toast.error(data.message || "Failed to add dish");
       }
-    } catch (err) {
-      toast.error("Server connection error!");
+    } catch (error) {
+      console.error("Error adding dish:", error);
+      toast.error("Server connection error.");
+    } finally {
+      setAddingDish(false);
     }
   };
-
-  // 🟢 4. UPDATE REAL ORDER STATUS
-  const handleUpdateOrderStatus = async (orderId, newStatus) => {
-    try {
-      const response = await fetch(`https://homefeast-fullstack.onrender.com/api/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token || localStorage.getItem('token')}` 
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        toast.success(`Order marked as ${newStatus}!`);
-        // Update local state instantly
-        setOrders(orders.map(order => order._id === orderId ? { ...order, status: newStatus } : order));
-      } else {
-        toast.error("Failed to update order status");
-      }
-    } catch (err) {
-      toast.error("Server connection error!");
-    }
-  };
-
-  // 🟢 5. REAL DYNAMIC CALCULATIONS FOR OVERVIEW TAB
-  const activeOrders = orders.filter(o => o.status === 'Pending' || o.status === 'Preparing');
-  const completedOrders = orders.filter(o => o.status === 'Delivered' || o.status === 'Completed');
-  // Total Earning unhi orders ki hogi jo complete ho gaye hain
-  const totalRevenue = completedOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#080D12] flex justify-center items-center">
-        <div className="w-12 h-12 border-4 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] pt-48 pb-20">
-      <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] pt-32 pb-20 relative overflow-hidden">
+      
+      {/* 🌟 Ambient Background Glows */}
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#F4B942]/5 rounded-full blur-[150px] pointer-events-none"></div>
+      <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-[#10B981]/5 rounded-full blur-[150px] pointer-events-none"></div>
+
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
-        {/* HEADER */}
-        <div className="bg-[#111827] border border-[#263241] rounded-3xl p-8 mb-8 flex flex-col md:flex-row items-center justify-between shadow-[0_10px_40px_rgba(0,0,0,0.5)] relative overflow-hidden">
-          <div className="absolute -top-20 -right-20 w-80 h-80 bg-[#10B981]/10 rounded-full blur-[100px] pointer-events-none"></div>
+        {/* Header */}
+        <div className="mb-12">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#F4B942]/10 border border-[#F4B942]/20 mb-5 shadow-[0_0_15px_rgba(244,185,66,0.15)]">
+            <span className="text-xs font-bold text-[#F4B942] uppercase tracking-widest">Kitchen Admin Panel</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#F8FAFC] mb-2">
+            Welcome, <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F4B942] to-[#FCD34D]">{userInfo.kitchenName || 'Chef'}</span> 👨‍🍳
+          </h1>
+          <p className="text-[#94A3B8] text-lg font-medium">Manage your kitchen menu and track your daily dishes.</p>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-10">
           
-          <div className="relative z-10 flex items-center gap-6 w-full md:w-auto">
-            <div className="relative">
-              <div className="w-20 h-20 bg-gradient-to-br from-[#10B981] to-[#059669] rounded-2xl flex items-center justify-center text-4xl shadow-lg transform rotate-3">
-                👨‍🍳
-              </div>
-              <div className="absolute -bottom-2 -right-2 bg-[#F4B942] text-[#080D12] text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">Pro</div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30 px-2 py-1 rounded uppercase font-bold tracking-widest">Kitchen Admin</span>
-                <span className="flex items-center gap-1 text-[10px] text-[#94A3B8] font-bold"><span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span> Online</span>
-              </div>
-              <h1 className="text-3xl font-black text-[#F8FAFC]">Hello, <span className="text-[#10B981]">{user?.name?.split(' ')[0] || 'Chef'}</span></h1>
-            </div>
-          </div>
-
-          <button onClick={() => { setActiveTab('menu'); setShowAddForm(true); }} className="mt-6 md:mt-0 w-full md:w-auto px-6 py-3 bg-[#10B981] hover:bg-[#059669] text-[#080D12] font-black rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:-translate-y-1 z-10 flex items-center justify-center gap-2">
-            + Add New Dish
-          </button>
-        </div>
-
-        {/* TABS */}
-        <div className="flex border-b border-[#263241] mb-8 overflow-x-auto custom-scrollbar">
-          {['overview', 'menu', 'orders'].map((tab) => (
-            <button 
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-4 px-6 text-sm font-black uppercase tracking-wider whitespace-nowrap transition-all duration-300 relative ${activeTab === tab ? 'text-[#10B981]' : 'text-[#64748B] hover:text-[#94A3B8]'}`}
-            >
-              {tab === 'overview' ? '📊 Dashboard Overview' : tab === 'menu' ? '🍔 Manage Menu' : '🔔 Live Orders'}
-              {activeTab === tab && <span className="absolute bottom-0 left-0 w-full h-1 bg-[#10B981] rounded-t-full"></span>}
-            </button>
-          ))}
-        </div>
-
-        {/* =========================================
-            TAB 1: REAL OVERVIEW (ANALYTICS)
-        ========================================== */}
-        {activeTab === 'overview' && (
-          <div className="space-y-8 animate-fade-in-up">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* ================= LEFT: ADD DISH FORM ================= */}
+          <div className="w-full lg:w-1/3">
+            <div className="bg-[#111827]/80 backdrop-blur-xl p-8 rounded-[32px] border border-[#263241] shadow-[0_20px_50px_rgba(0,0,0,0.3)] sticky top-28">
+              <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
+                <span className="w-10 h-10 rounded-full bg-[#1E293B] flex items-center justify-center text-lg">🍳</span>
+                Add New Dish
+              </h2>
               
-              <div className="bg-[#111827] border border-[#263241] p-6 rounded-3xl relative overflow-hidden group hover:border-[#10B981]/50 transition-colors">
-                <div className="absolute -right-4 -top-4 text-6xl opacity-5 group-hover:scale-110 transition-transform">💰</div>
-                <p className="text-[#94A3B8] text-sm font-bold uppercase tracking-wider mb-2">Total Revenue</p>
-                <h3 className="text-3xl font-black text-[#F8FAFC]">₹{totalRevenue}</h3>
-                <p className="text-xs text-[#10B981] mt-2 font-bold">Lifetime earnings</p>
-              </div>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Dish Name</label>
+                  <input type="text" name="name" required value={formData.name} onChange={handleChange} placeholder="e.g., Paneer Butter Masala" className="w-full px-4 py-3.5 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] placeholder-[#64748B] focus:outline-none focus:border-[#F4B942] focus:ring-1 focus:ring-[#F4B942] transition-all" />
+                </div>
+                
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Price (₹)</label>
+                    <input type="number" name="price" required value={formData.price} onChange={handleChange} placeholder="e.g., 250" className="w-full px-4 py-3.5 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] placeholder-[#64748B] focus:outline-none focus:border-[#F4B942] focus:ring-1 focus:ring-[#F4B942] transition-all" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Type</label>
+                    <select name="type" value={formData.type} onChange={handleChange} className="w-full px-4 py-3.5 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:outline-none focus:border-[#F4B942] focus:ring-1 focus:ring-[#F4B942] transition-all appearance-none cursor-pointer">
+                      <option value="Veg">🟢 Veg</option>
+                      <option value="Non-Veg">🔴 Non-Veg</option>
+                      <option value="Egg">🟡 Egg</option>
+                    </select>
+                  </div>
+                </div>
 
-              <div className="bg-[#111827] border border-[#263241] p-6 rounded-3xl relative overflow-hidden group hover:border-[#3B82F6]/50 transition-colors">
-                <div className="absolute -right-4 -top-4 text-6xl opacity-5 group-hover:scale-110 transition-transform">📦</div>
-                <p className="text-[#94A3B8] text-sm font-bold uppercase tracking-wider mb-2">Active Orders</p>
-                <h3 className="text-3xl font-black text-[#F8FAFC]">{activeOrders.length}</h3>
-                <p className="text-xs text-[#3B82F6] mt-2 font-bold">Needs preparation</p>
-              </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Description</label>
+                  <textarea name="description" rows="3" required value={formData.description} onChange={handleChange} placeholder="What makes this dish special?" className="w-full px-4 py-3.5 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] placeholder-[#64748B] focus:outline-none focus:border-[#F4B942] focus:ring-1 focus:ring-[#F4B942] transition-all resize-none"></textarea>
+                </div>
 
-              <div className="bg-[#111827] border border-[#263241] p-6 rounded-3xl relative overflow-hidden group hover:border-[#F4B942]/50 transition-colors">
-                <div className="absolute -right-4 -top-4 text-6xl opacity-5 group-hover:scale-110 transition-transform">✅</div>
-                <p className="text-[#94A3B8] text-sm font-bold uppercase tracking-wider mb-2">Completed Orders</p>
-                <h3 className="text-3xl font-black text-[#F8FAFC]">{completedOrders.length}</h3>
-                <p className="text-xs text-[#F4B942] mt-2 font-bold">Successfully delivered</p>
-              </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Image URL (Optional)</label>
+                  <input type="url" name="image" value={formData.image} onChange={handleChange} placeholder="https://example.com/image.jpg" className="w-full px-4 py-3.5 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] placeholder-[#64748B] focus:outline-none focus:border-[#F4B942] focus:ring-1 focus:ring-[#F4B942] transition-all" />
+                </div>
 
-              <div className="bg-[#111827] border border-[#263241] p-6 rounded-3xl relative overflow-hidden group hover:border-[#8B5CF6]/50 transition-colors">
-                <div className="absolute -right-4 -top-4 text-6xl opacity-5 group-hover:scale-110 transition-transform">🍲</div>
-                <p className="text-[#94A3B8] text-sm font-bold uppercase tracking-wider mb-2">Menu Items</p>
-                <h3 className="text-3xl font-black text-[#F8FAFC]">{menuItems.length}</h3>
-                <p className="text-xs text-[#8B5CF6] mt-2 font-bold">Live on platform</p>
-              </div>
-
+                <button type="submit" disabled={addingDish} className="w-full py-4 bg-[#F4B942] text-[#080D12] font-black rounded-xl hover:bg-[#D9A02E] transition-all shadow-[0_0_20px_rgba(244,185,66,0.2)] hover:shadow-[0_0_30px_rgba(244,185,66,0.4)] mt-4">
+                  {addingDish ? 'Adding to Menu...' : 'Publish Dish 🚀'}
+                </button>
+              </form>
             </div>
           </div>
-        )}
 
-        {/* =========================================
-            TAB 2: REAL MANAGE MENU (ADD/DELETE)
-        ========================================== */}
-        {activeTab === 'menu' && (
-          <div className="animate-fade-in-up">
-            {showAddForm && (
-              <div className="bg-[#111827] border border-[#10B981]/30 rounded-3xl p-6 sm:p-8 mb-10 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-[#10B981]">Add New Dish</h2>
-                  <button onClick={() => setShowAddForm(false)} className="text-[#64748B] hover:text-rose-500 font-bold text-sm bg-[#080D12] px-3 py-1.5 rounded-lg border border-[#263241]">Close</button>
-                </div>
-                <form onSubmit={handleAddItem} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Dish Name</label>
-                      <input type="text" name="dishName" required value={formData.dishName} onChange={handleInputChange} className="w-full px-4 py-3 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:border-[#10B981] focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Price (₹)</label>
-                      <input type="number" name="price" required value={formData.price} onChange={handleInputChange} className="w-full px-4 py-3 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:border-[#10B981] focus:outline-none" />
+          {/* ================= RIGHT: LIVE MENU DISPLAY ================= */}
+          <div className="w-full lg:w-2/3">
+            <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
+              <span className="w-10 h-10 rounded-full bg-[#1E293B] flex items-center justify-center text-lg">📜</span>
+              Your Current Menu
+            </h2>
+
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {/* Skeleton Loaders */}
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="bg-[#111827] border border-[#263241] rounded-3xl h-[300px] animate-pulse flex flex-col overflow-hidden">
+                    <div className="h-40 bg-[#1E293B]"></div>
+                    <div className="p-5 flex-1">
+                      <div className="h-6 bg-[#1E293B] rounded mb-3 w-3/4"></div>
+                      <div className="h-4 bg-[#1E293B] rounded w-1/4"></div>
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Description</label>
-                    <textarea name="description" required rows="3" value={formData.description} onChange={handleInputChange} className="w-full px-4 py-3 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:border-[#10B981] focus:outline-none resize-none"></textarea>
-                  </div>
-                  <div>
-                     <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Image URL (Optional)</label>
-                     <input type="text" name="image" value={formData.image} onChange={handleInputChange} placeholder="https://..." className="w-full px-4 py-3 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:border-[#10B981] focus:outline-none" />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Meal Type</label>
-                      <select name="mealType" value={formData.mealType} onChange={handleInputChange} className="w-full px-4 py-3 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:border-[#10B981] focus:outline-none">
-                        <option value="Pure Veg">🌿 Pure Veg</option>
-                        <option value="Non-Veg">🍗 Non-Veg</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Plan Type</label>
-                      <select name="planType" value={formData.planType} onChange={handleInputChange} className="w-full px-4 py-3 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:border-[#10B981] focus:outline-none">
-                        <option value="Daily">Daily Plan</option>
-                        <option value="Weekly">Weekly Plan</option>
-                        <option value="Monthly">Monthly Plan</option>
-                      </select>
-                    </div>
-                  </div>
-                  <button type="submit" className="w-full px-10 py-4 bg-[#10B981] text-[#080D12] font-black rounded-xl hover:bg-[#059669] transition-all">Publish Dish</button>
-                </form>
+                ))}
               </div>
-            )}
-
-            <div className="flex justify-between items-end mb-6">
-              <h2 className="text-2xl font-bold text-[#F8FAFC]">Your Live Menu</h2>
-              {!showAddForm && <button onClick={() => setShowAddForm(true)} className="text-sm font-bold text-[#10B981] hover:underline">+ Add New</button>}
-            </div>
-            
-            {menuItems.length === 0 ? (
-              <div className="bg-[#111827] border border-[#263241] border-dashed rounded-3xl p-16 text-center">
-                <span className="text-6xl mb-4 block opacity-50">🍽️</span>
-                <h3 className="text-xl font-bold text-[#F8FAFC] mb-2">Menu is Empty</h3>
-                <p className="text-[#94A3B8] mb-6">Start building your menu to get orders.</p>
+            ) : dishes.length === 0 ? (
+              <div className="bg-[#111827] border border-[#263241] rounded-[32px] p-12 text-center flex flex-col items-center justify-center h-[500px]">
+                <span className="text-6xl mb-6 opacity-80">🍽️</span>
+                <h3 className="text-2xl font-black text-[#F8FAFC] mb-3">Your Menu is Empty</h3>
+                <p className="text-[#94A3B8] max-w-md">You haven't added any dishes yet. Start adding delicious meals using the form to attract customers!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {menuItems.map((item) => (
-                  <div key={item._id} className="bg-[#111827] border border-[#263241] rounded-3xl overflow-hidden shadow-lg flex flex-col">
-                    <div className="relative h-48 overflow-hidden bg-[#1E293B]">
-                      <img src={item.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"} alt={item.dishName} className="w-full h-full object-cover" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {dishes.map((dish) => (
+                  <div key={dish._id} className="bg-[#111827] border border-[#263241] rounded-3xl overflow-hidden group hover:border-[#F4B942]/50 transition-all shadow-lg hover:shadow-[0_10px_30px_rgba(244,185,66,0.1)] flex flex-col">
+                    
+                    <div className="relative h-48 w-full bg-[#1E293B] overflow-hidden">
+                      <img 
+                        src={dish.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80"} 
+                        alt={dish.name} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#111827] to-transparent"></div>
+                      
+                      {/* Veg/Non-Veg Tag */}
+                      <div className="absolute top-4 right-4 bg-[#080D12]/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-[#263241]">
+                        <span className={`w-2.5 h-2.5 rounded-full ${dish.type === 'Veg' ? 'bg-[#10B981]' : dish.type === 'Non-Veg' ? 'bg-rose-500' : 'bg-yellow-500'}`}></span>
+                        <span className="text-xs font-bold text-[#F8FAFC] uppercase tracking-wider">{dish.type}</span>
+                      </div>
                     </div>
-                    <div className="p-5 flex-1 flex flex-col">
-                      <h3 className="text-xl font-bold text-[#F8FAFC] mb-1">{item.dishName}</h3>
-                      <p className="text-sm text-[#94A3B8] line-clamp-2 mb-4">{item.description}</p>
-                      <div className="mt-auto flex justify-between items-center border-t border-[#263241] pt-4">
-                        <span className="text-2xl font-black text-[#F8FAFC]">₹{item.price}</span>
-                        {/* 🟢 REAL DELETE BUTTON */}
-                        <button onClick={() => handleDeleteItem(item._id)} className="text-rose-500 font-bold hover:underline text-sm">
-                          Remove Dish
-                        </button>
+
+                    <div className="p-6 relative flex flex-col flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-xl font-black text-[#F8FAFC] line-clamp-1">{dish.name}</h3>
+                        <span className="text-lg font-black text-[#10B981]">₹{dish.price}</span>
+                      </div>
+                      <p className="text-[#94A3B8] text-sm line-clamp-2 mb-4 leading-relaxed">{dish.description}</p>
+                      
+                      <div className="mt-auto pt-4 border-t border-[#263241]/50 flex justify-between items-center">
+                        <span className="text-xs text-[#64748B] font-bold">Added to Live Menu</span>
+                        <button className="text-rose-500 hover:text-rose-400 text-sm font-bold transition-colors">Delete</button>
                       </div>
                     </div>
                   </div>
@@ -308,44 +217,8 @@ const CookDashboard = () => {
               </div>
             )}
           </div>
-        )}
 
-        {/* =========================================
-            TAB 3: REAL LIVE ORDERS
-        ========================================== */}
-        {activeTab === 'orders' && (
-          <div className="animate-fade-in-up space-y-4">
-            {orders.length === 0 ? (
-               <div className="bg-[#111827] border border-[#263241] rounded-3xl p-16 text-center">
-                 <h3 className="text-xl font-bold text-[#F8FAFC] mb-2">No Orders Yet</h3>
-                 <p className="text-[#94A3B8]">When customers buy your food, orders will appear here.</p>
-               </div>
-            ) : (
-               orders.map((order) => (
-                <div key={order._id} className="bg-[#111827] border border-[#263241] rounded-2xl p-5 flex flex-col md:flex-row justify-between gap-4">
-                  <div>
-                    <h4 className="text-lg font-bold text-[#F8FAFC]">Order ID: {order._id.substring(0, 8)}</h4>
-                    <p className="text-sm text-[#94A3B8] font-bold mt-1">Status: <span className={order.status === 'Completed' ? 'text-[#10B981]' : 'text-[#F4B942]'}>{order.status}</span></p>
-                  </div>
-                  <div className="flex flex-col md:flex-row items-center gap-4">
-                    <p className="text-xl font-black text-[#F8FAFC]">₹{order.totalAmount}</p>
-                    {/* 🟢 REAL STATUS UPDATE BUTTONS */}
-                    {order.status === 'Pending' && (
-                      <div className="flex gap-2">
-                        <button onClick={() => handleUpdateOrderStatus(order._id, 'Rejected')} className="px-4 py-2 bg-rose-500/10 text-rose-500 font-bold rounded-lg hover:bg-rose-500 hover:text-white">Reject</button>
-                        <button onClick={() => handleUpdateOrderStatus(order._id, 'Preparing')} className="px-4 py-2 bg-[#10B981] text-[#080D12] font-black rounded-lg">Accept & Prepare</button>
-                      </div>
-                    )}
-                    {order.status === 'Preparing' && (
-                      <button onClick={() => handleUpdateOrderStatus(order._id, 'Completed')} className="px-4 py-2 bg-blue-500 text-white font-black rounded-lg">Mark Completed</button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
+        </div>
       </div>
     </div>
   );
