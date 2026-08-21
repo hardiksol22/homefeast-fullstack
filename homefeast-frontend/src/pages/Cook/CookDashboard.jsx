@@ -23,7 +23,7 @@ const CookDashboard = () => {
         const token = user?.token || localStorage.getItem('token');
         
         // Fetch Menu Items from Backend
-        const menuRes = await fetch('http://localhost:5000/api/menu/my-menu', {
+        const menuRes = await fetch('https://homefeast-fullstack.onrender.com/api/menu/my-menu', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (menuRes.ok) {
@@ -32,7 +32,7 @@ const CookDashboard = () => {
         }
 
         // Fetch Orders from Backend
-        const ordersRes = await fetch('http://localhost:5000/api/orders/my-orders', {
+        const ordersRes = await fetch('https://homefeast-fullstack.onrender.com/api/orders/my-orders', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (ordersRes.ok) {
@@ -57,7 +57,7 @@ const CookDashboard = () => {
   const handleAddItem = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/menu', {
+      const response = await fetch('https://homefeast-fullstack.onrender.com/api/menu', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ const CookDashboard = () => {
     if(!window.confirm("Are you sure you want to delete this dish?")) return;
     
     try {
-      const response = await fetch(`http://localhost:5000/api/menu/${id}`, {
+      const response = await fetch(`https://homefeast-fullstack.onrender.com/api/menu/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${user.token || localStorage.getItem('token')}` }
       });
@@ -105,7 +105,7 @@ const CookDashboard = () => {
   // 🟢 4. UPDATE REAL ORDER STATUS
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
+      const response = await fetch(`https://homefeast-fullstack.onrender.com/api/orders/${orderId}/status`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',

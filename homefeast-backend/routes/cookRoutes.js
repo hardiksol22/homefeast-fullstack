@@ -1,9 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { getAllCooks, getCookDetails } = require('../controllers/cookController');
 
-// Routes ko controller functions se connect kiya gaya hai
-router.get('/', getAllCooks);          // GET request to /api/cooks
-router.get('/:id', getCookDetails);    // GET request to /api/cooks/12345 (User ID)
+// Yahan curly brackets {} me exactly wahi naam hone chahiye jo controller se export hue hain!
+const { getAllCooks /*, addDish, getMenu */ } = require('../controllers/cookController'); 
+
+// Explore page ke liye API route
+router.get('/', getAllCooks);
+
+// Purane routes (Agar hain toh unhe rehne dein)
+// router.post('/menu', addDish);
+// router.get('/menu', getMenu);
 
 module.exports = router;

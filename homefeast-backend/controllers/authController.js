@@ -1,66 +1,66 @@
-const User = require('../models/User'); // Apne User model ka path check kar lein
-const Cook = require('../models/Cook'); // Apne Cook model ka path check kar lein
+const User = require('../models/User');
+const Cook = require('../models/Cook'); // Cook profile
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// 🟢 GENERATE JWT TOKEN FUNCTION
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d', // Token 30 din tak valid rahega
-  });
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
-// 🟢 REGISTER USER (CUSTOMER OR COOK)
+// 🟢 REGISTER LOGIC (Dono ko alag-alag table me bhejna)
 const registerUser = async (req, res) => {
   try {
-    // Frontend se aane wala data extract kar rahe hain
     const { name, email, password, role, kitchenName } = req.body;
 
-    // 1. Check if all basic fields are provided
     if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Please fill all required fields' });
+      return res.status(400).json({ message: 'Please fill all fields' });
     }
 
-    // 2. Check if user already exists in Database
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: 'User with this email already exists' });
-    }
-
-    // 3. Hash the Password for Security
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 4. Create the User Profile
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role: role || 'customer',
-    });
+    // 👨‍🍳 AGAR COOK HAI, TOH SIRF COOK TABLE ME JAYEGA
+    if (role === 'cook') {
+      const cookExists = await Cook.findOne({ email });
+      if (cookExists) return res.status(400).json({ message: 'Email already registered as a Cook' });
 
-    // 5. 🌟 THE MAGIC: IF USER IS A COOK, SAVE THEIR KITCHEN
-    if (user.role === 'cook') {
-      await Cook.create({
-        user: user._id, // User ID se link kar diya
-        kitchenName: kitchenName || `${name}'s Kitchen`, // Frontend wala naam yahan save hoga
-        cuisine: 'Multi-Cuisine', // Default
-        rating: '0.0', // Default starting rating
-        image: '' // Front-end ka smart engine khud photo laga dega agar yeh khali hoga
+      const newCook = await Cook.create({
+        name,
+        email,
+        password: hashedPassword,
+        role: 'cook',
+        kitchenName: kitchenName || `${name}'s Kitchen`,
       });
-    }
 
-    // 6. Send Success Response with Token
-    if (user) {
-      res.status(201).json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        token: generateToken(user._id),
+      return res.status(201).json({
+        _id: newCook._id,
+        name: newCook.name,
+        email: newCook.email,
+        role: newCook.role,
+        kitchenName: newCook.kitchenName,
+        token: generateToken(newCook._id),
       });
-    } else {
-      res.status(400).json({ message: 'Invalid user data' });
+    } 
+    
+    // 🙍‍♂️ AGAR CUSTOMER HAI, TOH SIRF USER TABLE ME JAYEGA
+    else {
+      const userExists = await User.findOne({ email });
+      if (userExists) return res.status(400).json({ message: 'Email already registered as a Customer' });
+
+      const newUser = await User.create({
+        name,
+        email,
+        password: hashedPassword,
+        role: 'customer',
+      });
+
+      return res.status(201).json({
+        _id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        token: generateToken(newUser._id),
+      });
     }
   } catch (error) {
     console.error('Registration Error:', error);
@@ -68,22 +68,28 @@ const registerUser = async (req, res) => {
   }
 };
 
-// 🟢 LOGIN USER
+// 🟢 LOGIN LOGIC (Pehle Customer me dhundo, na mile toh Cook me dhundo)
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Find user by email
-    const user = await User.findOne({ email });
+    let account = await User.findOne({ email });
+    let isCook = false;
 
-    // 2. Compare entered password with hashed password in DB
-    if (user && (await bcrypt.compare(password, user.password))) {
+    // Agar customer table me nahi mila, toh pakka Cook hoga
+    if (!account) {
+      account = await Cook.findOne({ email });
+      isCook = true;
+    }
+
+    if (account && (await bcrypt.compare(password, account.password))) {
       res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        token: generateToken(user._id),
+        _id: account._id,
+        name: account.name,
+        email: account.email,
+        role: account.role,
+        ...(isCook && { kitchenName: account.kitchenName }), // Agar cook hai toh kitchen name bhi bhej do
+        token: generateToken(account._id),
       });
     } else {
       res.status(401).json({ message: 'Invalid Email or Password' });
@@ -94,7 +100,4 @@ const loginUser = async (req, res) => {
   }
 };
 
-module.exports = {
-  registerUser,
-  loginUser,
-};
+module.exports = { registerUser, loginUser };
