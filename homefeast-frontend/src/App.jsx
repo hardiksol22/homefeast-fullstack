@@ -22,6 +22,7 @@ import AdminDashboard from './pages/Admin/AdminDashboard';
 import NotFound from './pages/NotFound';
 import Chefs from './pages/Customer/Chefs';
 import Offers from './pages/Customer/Offers';
+import ProviderMenu from './pages/Customer/ProviderMenu';
 
 export default function App() {
   return (
@@ -92,6 +93,7 @@ export default function App() {
                 <Route path="*" element={<NotFound />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/provider/:id" element={<ProviderMenu />} />
               </Routes>
             </main>
 
