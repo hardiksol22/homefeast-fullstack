@@ -1,20 +1,20 @@
 const Cook = require('../models/Cook');
 const Dish = require('../models/Dish');
 
-// 1. GET ALL KITCHENS (Explore Page ke liye)
+// 1. GET ALL KITCHENS (Fixed: No populate needed since fields are directly in Cook model)
 const getAllCooks = async (req, res) => {
   try {
-    const kitchens = await Cook.find().populate('user', 'name email');
+    const kitchens = await Cook.find(); // Direct fetch, as fields like name & email are in Cook schema
     res.status(200).json(kitchens);
   } catch (error) {
-    res.status(500).json({ message: "Server Error fetching kitchens" });
+    console.error("Get All Cooks Error:", error);
+    res.status(500).json({ message: "Server Error fetching kitchens: " + error.message });
   }
 };
 
 // 2. ADD A NEW DISH (Crash-Proof Version)
 const addDish = async (req, res) => {
   try {
-    // 🟢 SMART FALLBACK: Token se ID lein, ya request body se ensure karein taaki 500 error na aaye
     const cookId = req.user?._id || req.body?.cookId; 
 
     if (!cookId) {
@@ -27,9 +27,8 @@ const addDish = async (req, res) => {
       return res.status(400).json({ message: "Dish name and price are required!" });
     }
 
-    // Nayi dish DB me safely ban gayi!
     const newDish = await Dish.create({
-      cook: cookId, // Dish par Cook ka tag lag gaya
+      cook: cookId, 
       name,
       price,
       description,
@@ -44,14 +43,11 @@ const addDish = async (req, res) => {
   }
 };
 
-// 3. GET KITCHEN MENU LIST (Customer jab kitchen kholega tab uski saari dishes aayengi)
+// 3. GET KITCHEN MENU LIST
 const getMenu = async (req, res) => {
   try {
-    const { cookId } = req.params; // URL se cook ki ID nikal li
-    
-    // Database me dhoondho wo saari dishes jispar is cookId ka tag hai
+    const { cookId } = req.params;
     const menuList = await Dish.find({ cook: cookId });
-    
     res.status(200).json(menuList);
   } catch (error) {
     console.error("Get Menu Error:", error);
