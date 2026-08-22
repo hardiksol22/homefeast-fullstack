@@ -7,247 +7,233 @@ const CustomerDashboard = () => {
   const [error, setError] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [cuisineFilter, setCuisineFilter] = useState("All");
+  // 🟢 NAYA FILTER: Sirf Veg aur Non-Veg rakha hai
+  const [dietFilter, setDietFilter] = useState("All"); 
+  
+  // 🧠 SUPER INTELLIGENCE STATES
+  const [greeting, setGreeting] = useState("");
+  const [moodSuggestion, setMoodSuggestion] = useState("");
+  const [smartFilter, setSmartFilter] = useState("All");
 
-  const cuisines = ["All", "North Indian", "South Indian", "Healthy", "Punjabi", "Keto", "Maharashtrian", "Bengali"];
+  // 👇 Removed 'Vegan' from here
+  const dietOptions = ["All", "Veg", "Non-Veg"];
 
-  // 📸 SMART PHOTO ENGINE
+  // 📸 SMART PHOTO ENGINE (For Kitchen Cover)
   const getKitchenImage = (provider) => {
-    if (provider.image && provider.image.length > 10) {
-      return provider.image;
-    }
-    
-    const cuisineImages = {
-      "North Indian": "https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=600&q=80",
-      "South Indian": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80",
-      "Healthy": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80",
-      "Punjabi": "https://images.unsplash.com/photo-1631515243349-e0cb75fb8d3a?auto=format&fit=crop&w=600&q=80",
-      "Keto": "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=600&q=80",
-      "Maharashtrian": "https://images.unsplash.com/photo-1606491956689-2ea866880c84?auto=format&fit=crop&w=600&q=80",
-      "Bengali": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=600&q=80"
-    };
-
-    return cuisineImages[provider.cuisine] || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80";
+    if (provider.image && provider.image.length > 10) return provider.image;
+    return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80";
   };
+
+  // 🧑‍🍳 CHEF AVATAR GENERATOR (For Profile)
+  const getAvatar = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Chef')}&background=10B981&color=080D12&size=150&bold=true`;
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 11) {
+      setGreeting("Good Morning! ☀️");
+      setMoodSuggestion("Start your day with fresh homemade breakfast.");
+    } else if (hour < 16) {
+      setGreeting("Good Afternoon! 🍛");
+      setMoodSuggestion("Lunchtime! Find the perfect home-cooked meal.");
+    } else if (hour < 21) {
+      setGreeting("Good Evening! 🍽️");
+      setMoodSuggestion("Let's get your perfect dinner sorted.");
+    } else {
+      setGreeting("Late Night Cravings? 🌙");
+      setMoodSuggestion("Midnight hunger? We've got you covered.");
+    }
+  }, []);
 
   useEffect(() => {
     const fetchCooks = async () => {
       setLoading(true);
-      setError(null);
       try {
         const response = await fetch('https://homefeast-fullstack.onrender.com/api/cooks');
-        
         if (response.ok) {
           const data = await response.json();
-          let realCooks = [];
-          
-          if (Array.isArray(data)) realCooks = data;
-          else if (data && Array.isArray(data.cooks)) realCooks = data.cooks;
-          else if (data && Array.isArray(data.data)) realCooks = data.data;
-
+          let realCooks = Array.isArray(data) ? data : (data.cooks || data.data || []);
           setProviders(realCooks);
-        } else {
-          throw new Error('Failed to fetch from server');
-        }
+        } else throw new Error('Fetch failed');
       } catch (err) {
-        console.error("Fetch Error:", err);
-        setError("Unable to load kitchens right now. Please check your internet or try again later.");
-        setProviders([]);
+        setError("Unable to connect to HomeFeast Servers.");
       } finally {
         setLoading(false);
       }
     };
-
     fetchCooks();
   }, []);
 
   const filteredProviders = providers.filter(provider => {
     const kitchen = provider?.kitchenName || "";
     const cuisine = provider?.cuisine || "";
+    const type = provider?.type || provider?.cuisine || ""; 
+
+    const matchesSearch = kitchen.toLowerCase().includes(searchTerm.toLowerCase()) || cuisine.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesSearch = 
-      kitchen.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cuisine.toLowerCase().includes(searchTerm.toLowerCase());
-      
-    const matchesCuisine = cuisineFilter === "All" ? true : cuisine.includes(cuisineFilter);
+    // 🟢 Veg/Non-Veg Filter Logic
+    const matchesDiet = dietFilter === "All" ? true : type.includes(dietFilter);
     
-    return matchesSearch && matchesCuisine;
+    let matchesSmart = true;
+    if (smartFilter === "Top Rated") matchesSmart = parseFloat(provider.rating || 0) >= 4.7;
+    if (smartFilter === "Fast Delivery") matchesSmart = parseFloat(provider.rating || 0) >= 4.0; 
+
+    return matchesSearch && matchesDiet && matchesSmart;
   });
 
+  const aiPicks = [...providers].sort((a, b) => parseFloat(b.rating || 0) - parseFloat(a.rating || 0)).slice(0, 3);
+
   const SkeletonLoader = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-[#111827] border border-[#263241] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[420px] animate-pulse">
-          <div className="h-56 w-full bg-[#1E293B]"></div>
-          <div className="p-6 flex flex-col flex-1 justify-between">
-            <div>
-              <div className="h-7 w-3/4 bg-[#1E293B] rounded-lg mb-3"></div>
-              <div className="h-4 w-1/2 bg-[#1E293B] rounded mb-6"></div>
-            </div>
-            <div className="h-12 w-full bg-[#1E293B] rounded-xl mt-6"></div>
-          </div>
-        </div>
-      ))}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {[1, 2, 3].map(i => <div key={i} className="h-[400px] bg-[#111827] border border-[#263241] rounded-[32px] animate-pulse"></div>)}
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] pt-36 pb-20 relative overflow-hidden">
-      
-      {/* 🌟 Ambient Background Glows */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#10B981]/5 rounded-full blur-[150px] pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-[#F4B942]/5 rounded-full blur-[150px] pointer-events-none"></div>
+    <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] pt-32 pb-20 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#10B981]/10 rounded-full blur-[150px] pointer-events-none"></div>
 
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
-        {/* Header Section */}
-        <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 relative">
-          <div className="relative z-10">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#10B981]/10 border border-[#10B981]/20 mb-5 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
-              <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping"></span>
-              <span className="text-xs font-bold text-[#10B981] uppercase tracking-widest">Active Kitchens in your area</span>
-            </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-[#F8FAFC] mb-4">
-              Discover <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#10B981] via-[#34D399] to-[#10B981]">Homemade Tiffins</span>
-            </h1>
-            <p className="text-[#94A3B8] text-lg max-w-2xl font-medium">
-              Browse through verified home cooks. Prepared with love, hygiene, and the finest local ingredients.
-            </p>
+        {/* Header & Smart Search */}
+        <div className="mb-12 animate-fade-in-up">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#10B981]/10 border border-[#10B981]/20 mb-4 backdrop-blur-md">
+            <span className="text-xl">👋</span>
+            <span className="text-sm font-black text-[#10B981] tracking-widest">{greeting}</span>
           </div>
-          
-          {!loading && !error && (
-             <div className="bg-[#111827]/80 backdrop-blur-md border border-[#263241] px-6 py-4 rounded-2xl text-sm font-bold text-[#94A3B8] shadow-xl whitespace-nowrap flex items-center gap-3">
-               <div className="w-10 h-10 rounded-full bg-[#10B981]/10 flex items-center justify-center text-[#10B981] text-xl">🍲</div>
-               <div>
-                 <p className="text-xs uppercase tracking-wider text-[#64748B] mb-0.5">Total Available</p>
-                 <p className="text-[#F8FAFC] text-lg"><span className="text-[#10B981] text-xl">{filteredProviders.length}</span> Kitchens</p>
-               </div>
-             </div>
-          )}
+          <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-3">
+            What are you <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#10B981] to-[#F4B942]">craving</span> today?
+          </h1>
+          <p className="text-[#94A3B8] text-lg font-medium">{moodSuggestion}</p>
         </div>
 
-        {/* 🔍 Sticky Search & Filter Bar */}
-        <div className="bg-[#111827]/80 backdrop-blur-2xl p-5 rounded-3xl border border-[#263241] shadow-[0_20px_40px_rgba(0,0,0,0.4)] mb-14 sticky top-24 z-40 transition-all">
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
+        <div className="bg-[#111827]/80 backdrop-blur-3xl p-5 rounded-[28px] border border-[#263241] shadow-2xl mb-12 sticky top-24 z-40">
+          <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1 group">
-              <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-colors group-focus-within:text-[#10B981]">
-                <svg className="h-5 w-5 text-[#64748B] group-focus-within:text-[#10B981] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              </div>
+              <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-[#64748B] group-focus-within:text-[#10B981]">🔍</div>
               <input 
-                type="text" 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-                placeholder="Search by kitchen name or favorite cuisine..." 
-                className="w-full pl-12 pr-4 py-4 bg-[#080D12] border border-[#263241] rounded-2xl text-[#F8FAFC] placeholder-[#64748B] focus:outline-none focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] text-sm font-medium transition-all shadow-inner" 
+                type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
+                placeholder="Search kitchens or chefs..." 
+                className="w-full pl-14 pr-6 py-4 bg-[#080D12] border border-[#263241] rounded-2xl text-[#F8FAFC] focus:outline-none focus:border-[#10B981] font-semibold transition-all shadow-inner" 
               />
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-2 lg:pb-0 hide-scrollbar items-center">
+              {["All", "Top Rated", "Fast Delivery"].map(filter => (
+                <button 
+                  key={filter} onClick={() => setSmartFilter(filter)}
+                  className={`px-5 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all ${
+                    smartFilter === filter ? "bg-[#F8FAFC] text-[#080D12]" : "bg-[#1E293B] text-[#94A3B8] hover:text-[#F8FAFC]"
+                  }`}
+                >
+                  {filter === "Top Rated" ? "⭐ " : filter === "Fast Delivery" ? "⚡ " : ""}{filter}
+                </button>
+              ))}
             </div>
           </div>
           
-          <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[#263241]/50">
-            <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider mr-2 hidden sm:block flex-shrink-0">Filter By Cuisine:</span>
-            {cuisines.map((cuisine) => (
+          {/* 🟢 NEW DIETARY PREFERENCE FILTERS (Veg / Non-Veg Only) */}
+          <div className="flex gap-3 mt-4 overflow-x-auto hide-scrollbar pt-4 border-t border-[#263241]/50 items-center">
+            <span className="text-xs font-black text-[#64748B] uppercase tracking-widest mr-2 hidden sm:block flex-shrink-0">Preference:</span>
+            {dietOptions.map(diet => (
               <button 
-                key={cuisine} 
-                onClick={() => setCuisineFilter(cuisine)} 
-                className={`px-5 py-2 rounded-full text-xs font-bold transition-all duration-300 ${
-                  cuisineFilter === cuisine 
-                    ? "bg-[#10B981] text-[#080D12] shadow-[0_0_20px_rgba(16,185,129,0.4)] transform scale-105" 
-                    : "bg-[#080D12] border border-[#263241] text-[#94A3B8] hover:border-[#64748B] hover:text-[#F8FAFC] hover:bg-[#1E293B]"
+                key={diet} onClick={() => setDietFilter(diet)} 
+                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-300 flex items-center gap-2 ${
+                  dietFilter === diet 
+                  ? diet === 'Veg' ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]' 
+                  : diet === 'Non-Veg' ? 'bg-[#F43F5E]/20 text-[#F43F5E] border border-[#F43F5E]/50 shadow-[0_0_15px_rgba(244,63,94,0.2)]'
+                  : 'bg-[#F8FAFC]/10 text-[#F8FAFC] border border-[#F8FAFC]/50'
+                  : "bg-[#080D12] text-[#64748B] border border-[#263241] hover:border-[#64748B] hover:text-[#F8FAFC]"
                 }`}
               >
-                {cuisine}
+                {/* 👇 Removed Vegan icon logic here */}
+                {diet === 'Veg' && <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span>}
+                {diet === 'Non-Veg' && <span className="w-2.5 h-2.5 rounded-full bg-[#F43F5E]"></span>}
+                {diet === 'All' && <span className="text-sm">🍽️</span>}
+                {diet}
               </button>
             ))}
           </div>
         </div>
 
-        {loading && <SkeletonLoader />}
-
-        {error && (
-          <div className="w-full text-center py-20 bg-rose-500/5 border border-rose-500/20 rounded-3xl max-w-4xl mx-auto shadow-2xl relative overflow-hidden">
-            <span className="text-6xl block mb-6 animate-bounce">🔌</span>
-            <h3 className="text-2xl font-black text-rose-500 mb-3">Backend Connection Error</h3>
-            <p className="text-[#94A3B8] text-lg">{error}</p>
-            <button onClick={() => window.location.reload()} className="mt-8 px-8 py-3.5 bg-[#111827] border border-[#263241] text-[#F8FAFC] font-black rounded-xl hover:bg-[#1E293B] hover:text-[#10B981] transition-all">
-              Refresh Page Now
-            </button>
-          </div>
-        )}
-
-        {/* 🏪 Real Kitchens Grid */}
-        {!loading && !error && (
+        {loading ? <SkeletonLoader /> : error ? (
+           <div className="text-center py-20 bg-rose-500/10 border border-rose-500/20 rounded-3xl"><h3 className="text-2xl text-rose-500">{error}</h3></div>
+        ) : (
           <>
-            {filteredProviders.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredProviders.map((provider) => (
-                  <div key={provider._id} className="bg-[#111827] border border-[#263241] rounded-3xl overflow-hidden group flex flex-col hover:border-[#10B981]/50 hover:shadow-[0_15px_50px_rgba(16,185,129,0.15)] transition-all duration-500 transform hover:-translate-y-2 relative">
-                    
-                    {/* Image Section */}
-                    <div className="relative h-56 w-full bg-[#1E293B] overflow-hidden">
-                      <img 
-                        src={getKitchenImage(provider)} 
-                        alt={provider.kitchenName} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-90" 
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#111827] via-[#111827]/40 to-transparent"></div>
-                      
-                      <div className="absolute top-4 right-4 bg-[#080D12]/90 backdrop-blur-md border border-[#F4B942]/40 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-[0_0_15px_rgba(244,185,66,0.3)]">
-                        <span className="text-[#F4B942] text-sm">⭐</span>
-                        <span className="text-[#F8FAFC] text-sm font-black">{provider.rating || '4.8'}</span>
+            {/* AI SMART PICKS */}
+            {!searchTerm && dietFilter === "All" && smartFilter === "All" && aiPicks.length > 0 && (
+              <div className="mb-16">
+                <h2 className="text-2xl font-black mb-6 flex items-center gap-2">
+                  <span className="bg-[#1E293B] p-2 rounded-lg text-xl">✨</span> AI Smart Picks For You
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {aiPicks.map(provider => (
+                    <Link key={`ai-${provider._id}`} to={`/provider/${provider._id}`} className="block group">
+                      <div className="bg-[#111827] border border-[#263241] rounded-[24px] p-4 flex gap-4 hover:border-[#10B981]/50 hover:bg-[#1E293B]/50 transition-all shadow-lg items-center">
+                        <div className="relative">
+                          <img src={getAvatar(provider.user?.name || provider.kitchenName)} className="w-16 h-16 rounded-full border-2 border-[#10B981] object-cover" alt="Chef Avatar" />
+                          <div className="absolute -bottom-1 -right-1 bg-[#080D12] text-[10px] w-6 h-6 flex items-center justify-center rounded-full border border-[#263241]">👨‍🍳</div>
+                        </div>
+                        <div className="flex-1 py-1">
+                          <h4 className="font-black text-[#F8FAFC] text-lg leading-tight group-hover:text-[#10B981]">{provider.kitchenName}</h4>
+                          <p className="text-xs text-[#94A3B8] font-bold mt-1">by Chef {provider.user?.name}</p>
+                        </div>
                       </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* EXPLORE KITCHENS GRID */}
+            <h2 className="text-2xl font-black mb-6 border-b border-[#263241] pb-4">Explore Kitchens & Chefs</h2>
+            
+            {filteredProviders.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mt-10">
+                {filteredProviders.map((provider) => (
+                  <div key={provider._id} className="bg-[#111827] border border-[#263241] rounded-[32px] overflow-visible group flex flex-col hover:border-[#10B981]/40 hover:shadow-[0_20px_40px_rgba(16,185,129,0.15)] transition-all duration-500 transform hover:-translate-y-2 h-full mt-6">
+                    
+                    {/* Kitchen Cover Image */}
+                    <div className="relative h-48 w-full overflow-hidden rounded-t-[32px]">
+                      <img src={getKitchenImage(provider)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" alt="Kitchen Cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#080D12] via-transparent to-transparent"></div>
+                      <div className="absolute top-4 right-4 bg-[#080D12]/80 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-lg font-black text-sm text-[#F8FAFC]">⭐ {provider.rating || '4.8'}</div>
                     </div>
 
-                    <div className="p-7 relative -mt-6 flex flex-col flex-1 bg-[#111827] rounded-t-[32px] border-t border-[#263241]/50 z-10">
-                      <h3 className="text-2xl font-black text-[#F8FAFC] line-clamp-1 group-hover:text-[#10B981] transition-colors">{provider.kitchenName || 'Chef Kitchen'}</h3>
+                    <div className="p-6 flex flex-col flex-1 bg-[#080D12] rounded-b-[32px] relative pt-12">
                       
-                      <p className="text-[#94A3B8] text-sm mb-5 font-semibold mt-2 flex items-center gap-1.5">
-                        <span className="w-6 h-6 rounded-full bg-[#1E293B] flex items-center justify-center text-xs">👨‍🍳</span>
-                        by {provider.user?.name || 'Home Chef'} • {provider.cuisine || 'Multi-Cuisine'}
-                      </p>
-                      
-                      <div className="flex items-center gap-2 mb-8 flex-wrap">
-                        <span className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 flex items-center gap-1">
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                          FSSAI Verified
-                        </span>
-                        <span className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[#F4B942]/10 text-[#F4B942] border border-[#F4B942]/20 flex items-center gap-1">
-                          Daily Fresh
-                        </span>
+                      {/* Chef Avatar Overlapping */}
+                      <div className="absolute -top-10 left-6 z-20">
+                        <div className="relative group-hover:-translate-y-2 transition-transform duration-300">
+                           <img 
+                             src={getAvatar(provider.user?.name || provider.kitchenName)} 
+                             className="w-20 h-20 rounded-full border-4 border-[#080D12] shadow-xl object-cover" 
+                             alt="Chef Avatar" 
+                           />
+                           <div className="absolute bottom-0 right-0 bg-[#10B981] w-5 h-5 rounded-full border-2 border-[#080D12] shadow-sm"></div>
+                        </div>
                       </div>
 
-                      <div className="mt-auto pt-2">
-                        <Link 
-                          to={`/provider/${provider.user?._id || provider._id}`} 
-                          className="w-full flex items-center justify-center gap-3 px-4 py-4 bg-[#080D12] text-[#F8FAFC] text-sm font-black rounded-2xl border border-[#263241] group-hover:bg-[#10B981] group-hover:text-[#080D12] group-hover:border-[#10B981] transition-all duration-300 shadow-md"
-                        >
-                          Explore Kitchen Menu
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="text-xl font-black text-[#F8FAFC] line-clamp-1 group-hover:text-[#10B981] transition-colors">{provider.kitchenName}</h3>
+                          <p className="text-[#10B981] text-sm font-black mt-1">👨‍🍳 Chef {provider.user?.name || 'Partner'}</p>
+                        </div>
+                      </div>
+                      
+                      <p className="text-[#64748B] text-xs font-bold mb-4">{provider.cuisine} • Freshly Prepared</p>
+                      
+                      <div className="mt-auto pt-4 border-t border-[#263241]">
+                        <Link to={`/provider/${provider._id}`} className="w-full block text-center py-3.5 bg-[#111827] text-[#F8FAFC] text-sm font-black rounded-xl border border-[#263241] group-hover:bg-[#10B981] group-hover:text-[#080D12] transition-all shadow-md">
+                          Visit Profile & Menu →
                         </Link>
                       </div>
                     </div>
-
                   </div>
                 ))}
               </div>
             ) : (
-              // ❌ EMPTY STATE (No CTA Button)
-              <div className="w-full text-center py-24 bg-[#111827] border border-[#263241] rounded-3xl mt-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden">
-                <span className="text-5xl opacity-80 block mb-6">🍽️</span>
-                <h3 className="text-3xl font-black text-[#F8FAFC]">No Kitchens Found</h3>
-                
-                {searchTerm || cuisineFilter !== "All" ? (
-                  <>
-                    <p className="text-[#94A3B8] mt-4 text-lg mb-8 max-w-xl mx-auto">
-                      No kitchens match your current search or filters. Try clearing them.
-                    </p>
-                    <button onClick={() => {setSearchTerm(""); setCuisineFilter("All");}} className="px-8 py-3.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30 font-bold rounded-xl hover:bg-[#10B981] hover:text-[#080D12] transition-colors relative z-10">
-                      Clear Filters
-                    </button>
-                  </>
-                ) : (
-                  <p className="text-[#94A3B8] mt-4 text-lg mb-8 max-w-xl mx-auto">
-                    We are currently expanding our services in your area. Real, authentic home kitchens will be added here soon. Stay tuned!
-                  </p>
-                )}
+              <div className="w-full text-center py-20 bg-[#111827] border border-[#263241] rounded-[32px]">
+                <h3 className="text-2xl font-black text-[#F8FAFC]">No matching kitchens found.</h3>
+                <button onClick={() => {setSearchTerm(""); setDietFilter("All"); setSmartFilter("All");}} className="mt-4 px-6 py-3 bg-[#10B981]/20 text-[#10B981] rounded-xl font-bold">Clear Filters</button>
               </div>
             )}
           </>
