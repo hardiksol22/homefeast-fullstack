@@ -7,7 +7,7 @@ const CookDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth(); 
   
-  const [activeTab, setActiveTab] = useState('menu'); // 'orders', 'menu', 'payouts'
+  const [activeTab, setActiveTab] = useState('menu'); // 'orders', 'menu', 'payouts', 'profile'
   
   const [dishes, setDishes] = useState([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
@@ -24,6 +24,8 @@ const CookDashboard = () => {
   const cookId = user?._id || user?.user?._id;
   const token = user?.token || user?.user?.token;
   const kitchenName = user?.kitchenName || user?.user?.kitchenName || "Maa ka Pyar";
+  const chefName = user?.name || user?.user?.name || "Chef";
+  const chefEmail = user?.email || user?.user?.email || "chef@homefeast.com";
 
   // 📡 1. FETCH REAL MENU FROM BACKEND
   useEffect(() => {
@@ -80,7 +82,7 @@ const CookDashboard = () => {
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // 🚀 ADD NEW DISH (SMART DEBUG VERSION)
+  // 🚀 ADD NEW DISH
   const handleSubmit = async (e) => {
     e.preventDefault();
     setAddingDish(true);
@@ -94,24 +96,19 @@ const CookDashboard = () => {
         },
         body: JSON.stringify({
           ...formData,
-          cookId: cookId // 🟢 FIX: Backend ko cookId extra bhej diya just in case
+          cookId: cookId 
         })
       });
       
       const data = await response.json();
-      
-      // 🟢 SMART DEBUG: Console (F12) mein exactly dekhein backend kya bhej raha hai
-      console.log("Backend Add Dish Response:", data);
 
       if (response.ok) {
         toast.success("Dish added to your menu! 🍲", { style: { background: '#10B981', color: '#080D12', fontWeight: 'bold' } });
-        
-        // 🟢 FIX: Safe data extraction
         const newDish = data.dish || data.data || data; 
         setDishes([newDish, ...dishes]);
         setFormData({ name: '', price: '', description: '', type: 'Veg', image: '' });
       } else {
-        toast.error(data.message || "Backend rejected the dish! Check console (F12).");
+        toast.error(data.message || "Backend rejected the dish!");
       }
     } catch (error) {
       console.error("Add Dish Crash Error:", error);
@@ -160,6 +157,7 @@ const CookDashboard = () => {
             <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span> Accepting Orders
           </p>
         </div>
+        
         <nav className="flex-1 space-y-3">
           <button 
             onClick={() => setActiveTab('orders')}
@@ -182,7 +180,16 @@ const CookDashboard = () => {
           >
             📈 Revenue & Payouts
           </button>
+
+          {/* 🟢 NEW SIDEBAR PROFILE TAB */}
+          <button 
+            onClick={() => setActiveTab('profile')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'profile' ? 'bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border border-transparent'}`}
+          >
+            👤 Chef Profile
+          </button>
         </nav>
+
         <div className="mt-auto pt-6 border-t border-[#263241]">
           <p className="text-xs text-[#64748B] font-bold uppercase tracking-wider text-center">HomeFeast Partner</p>
         </div>
@@ -194,12 +201,12 @@ const CookDashboard = () => {
 
         <header className="mb-10 relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-2">Welcome back, Chef! 👨‍🍳</h1>
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-2">Welcome back, {chefName}! 👨‍🍳</h1>
             <p className="text-[#94A3B8] text-lg font-medium">Here is what's happening in your kitchen today.</p>
           </div>
         </header>
 
-        {/* 📈 REAL DYNAMIC STATS */}
+        {/* 📈 DYNAMIC STATS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 relative z-10">
           <div className="bg-[#111827] border border-[#263241] p-6 rounded-3xl flex items-center gap-5 shadow-lg relative overflow-hidden">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl bg-[#F4B942]/10 text-[#F4B942] relative z-10">🔥</div>
@@ -224,7 +231,7 @@ const CookDashboard = () => {
           </div>
         </div>
 
-        {/* 🔀 CONDITIONAL RENDERING */}
+        {/* 🔀 CONDITIONAL RENDERING (ORDERS / MENU / PAYOUTS / PROFILE) */}
         {activeTab === 'orders' ? (
           
           <div className="relative z-10 animate-fade-in-up">
@@ -377,7 +384,7 @@ const CookDashboard = () => {
             </div>
           </div>
 
-        ) : (
+        ) : activeTab === 'payouts' ? (
           
           <div className="relative z-10 animate-fade-in-up max-w-4xl mx-auto">
             <div className="bg-[#111827]/80 backdrop-blur-xl border border-[#263241] rounded-[32px] p-8 md:p-10 shadow-2xl">
@@ -406,14 +413,47 @@ const CookDashboard = () => {
                   <p className="text-xs text-[#94A3B8] mt-2 font-medium">Deducted automatically per order.</p>
                 </div>
               </div>
-              <div>
-                <h3 className="text-lg font-black mb-4">Recent Settlements</h3>
-                <div className="bg-[#080D12] border border-[#263241] rounded-2xl p-6 text-center text-[#94A3B8]">
-                  <p>No payout history available yet. Complete more orders to initiate weekly settlements!</p>
+            </div>
+          </div>
+
+        ) : (
+          
+          /* 👤 PROFILE TAB VIEW */
+          <div className="relative z-10 animate-fade-in-up max-w-4xl mx-auto">
+            <div className="bg-[#111827]/80 backdrop-blur-xl border border-[#263241] rounded-[32px] p-8 md:p-10 shadow-2xl">
+              <div className="flex flex-col md:flex-row items-center gap-6 pb-8 border-b border-[#263241]">
+                <div className="w-24 h-24 rounded-full bg-[#10B981]/20 border-2 border-[#10B981] flex items-center justify-center text-4xl shadow-lg">
+                  👨‍🍳
                 </div>
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-black text-[#F8FAFC]">{chefName}</h2>
+                  <p className="text-[#10B981] font-bold text-sm mt-1">{kitchenName}</p>
+                  <p className="text-[#64748B] text-xs mt-1">{chefEmail}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+                <div className="bg-[#080D12] border border-[#263241] p-6 rounded-2xl">
+                  <p className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-1">Partner Role</p>
+                  <p className="text-lg font-black text-[#F8FAFC] uppercase">{userRole || 'Cook'}</p>
+                </div>
+                <div className="bg-[#080D12] border border-[#263241] p-6 rounded-2xl">
+                  <p className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-1">Kitchen Status</p>
+                  <p className="text-lg font-black text-[#10B981]">Active & Verified ✅</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-[#263241]">
+                <button 
+                  onClick={() => toast.success("Kitchen profile details are up to date! 🛡️")} 
+                  className="px-8 py-3.5 bg-[#10B981] text-[#080D12] font-black rounded-xl hover:bg-[#059669] transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                >
+                  Save Profile 💾
+                </button>
               </div>
             </div>
           </div>
+
         )}
       </main>
     </div>
