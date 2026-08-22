@@ -147,11 +147,11 @@ const CookDashboard = () => {
   const todaysRevenue = activeOrders.reduce((total, order) => total + (order.totalAmount || order.total || 0), 0);
 
   return (
-    <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] flex flex-col md:flex-row pt-[72px]">
+    <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] flex flex-col md:flex-row">
       
-      {/* 📱 SIDEBAR */}
-      <aside className="w-full md:w-64 bg-[#111827] border-r border-[#263241] p-6 hidden md:flex flex-col h-[calc(100vh-72px)] sticky top-[72px] z-10">
-        <div className="mb-8">
+      {/* ================= 📱 FULL HEIGHT SIDEBAR ================= */}
+      <aside className="w-full md:w-72 bg-[#111827] border-r border-[#263241] p-6 hidden md:flex flex-col h-screen sticky top-0 z-20">
+        <div className="mb-10 pt-4">
           <h2 className="text-xl font-black text-[#F4B942] truncate" title={kitchenName}>{kitchenName}</h2>
           <p className="text-sm text-[#94A3B8] font-medium mt-1 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span> Accepting Orders
@@ -161,7 +161,7 @@ const CookDashboard = () => {
         <nav className="flex-1 space-y-3">
           <button 
             onClick={() => setActiveTab('orders')}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'orders' ? 'bg-[#F4B942]/10 text-[#F4B942] border border-[#F4B942]/20 shadow-[0_0_15px_rgba(244,185,66,0.1)]' : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border border-transparent'}`}
+            className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'orders' ? 'bg-[#F4B942]/10 text-[#F4B942] border border-[#F4B942]/20 shadow-[0_0_15px_rgba(244,185,66,0.1)]' : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border border-transparent'}`}
           >
             <span className="flex items-center gap-3">📦 Live Orders</span>
             {activeOrders.length > 0 && <span className="w-5 h-5 bg-[#F4B942] text-[#080D12] rounded-full text-xs flex items-center justify-center font-black animate-pulse">{activeOrders.length}</span>}
@@ -169,37 +169,36 @@ const CookDashboard = () => {
 
           <button 
             onClick={() => setActiveTab('menu')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'menu' ? 'bg-[#F4B942]/10 text-[#F4B942] border border-[#F4B942]/20 shadow-[0_0_15px_rgba(244,185,66,0.1)]' : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border border-transparent'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'menu' ? 'bg-[#F4B942]/10 text-[#F4B942] border border-[#F4B942]/20 shadow-[0_0_15px_rgba(244,185,66,0.1)]' : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border border-transparent'}`}
           >
             🍲 Manage Menu
           </button>
 
           <button 
             onClick={() => setActiveTab('payouts')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'payouts' ? 'bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border border-transparent'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'payouts' ? 'bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border border-transparent'}`}
           >
             📈 Revenue & Payouts
           </button>
 
-          {/* 🟢 NEW SIDEBAR PROFILE TAB */}
           <button 
             onClick={() => setActiveTab('profile')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'profile' ? 'bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border border-transparent'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'profile' ? 'bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border border-transparent'}`}
           >
             👤 Chef Profile
           </button>
         </nav>
 
-        <div className="mt-auto pt-6 border-t border-[#263241]">
+        <div className="mt-auto pt-6 border-t border-[#263241] pb-4">
           <p className="text-xs text-[#64748B] font-bold uppercase tracking-wider text-center">HomeFeast Partner</p>
         </div>
       </aside>
 
-      {/* 📊 MAIN CONTENT */}
-      <main className="flex-1 p-4 sm:p-8 overflow-y-auto relative">
+      {/* ================= 📊 MAIN CONTENT ================= */}
+      <main className="flex-1 p-6 sm:p-10 overflow-y-auto relative min-h-screen">
         <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[#F4B942]/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-        <header className="mb-10 relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+        <header className="mb-10 relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 pt-4">
           <div>
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-2">Welcome back, {chefName}! 👨‍🍳</h1>
             <p className="text-[#94A3B8] text-lg font-medium">Here is what's happening in your kitchen today.</p>
@@ -231,7 +230,7 @@ const CookDashboard = () => {
           </div>
         </div>
 
-        {/* 🔀 CONDITIONAL RENDERING (ORDERS / MENU / PAYOUTS / PROFILE) */}
+        {/* 🔀 CONDITIONAL RENDERING */}
         {activeTab === 'orders' ? (
           
           <div className="relative z-10 animate-fade-in-up">
@@ -313,7 +312,7 @@ const CookDashboard = () => {
           
           <div className="flex flex-col xl:flex-row gap-8 relative z-10 animate-fade-in-up">
             <div className="w-full xl:w-[400px] shrink-0">
-              <div className="bg-[#111827]/80 backdrop-blur-xl p-8 rounded-[32px] border border-[#263241] shadow-2xl xl:sticky xl:top-[100px]">
+              <div className="bg-[#111827]/80 backdrop-blur-xl p-8 rounded-[32px] border border-[#263241] shadow-2xl xl:sticky xl:top-[40px]">
                 <h2 className="text-2xl font-black mb-8 flex items-center gap-3">
                   <span className="w-10 h-10 rounded-xl bg-[#F4B942]/10 text-[#F4B942] flex items-center justify-center border border-[#F4B942]/20 shadow-[0_0_15px_rgba(244,185,66,0.2)]">🍳</span>
                   Add New Dish
