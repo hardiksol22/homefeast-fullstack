@@ -27,6 +27,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/cooks', require('./routes/cookRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
+app.use('/api/cart', require('./routes/cartRoutes'));
 
 // 🏠 Basic Test Route
 app.get('/', (req, res) => {

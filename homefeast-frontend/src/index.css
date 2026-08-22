@@ -1,7 +1,18 @@
 @import "tailwindcss";
 
-/* You can add custom global styles here later if needed */
+/* 🚀 Universal fix for Horizontal Scroll & White Space */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* 🚀 Infinite Marquee Animation for HomeFeast Banner */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
 }

@@ -8,6 +8,7 @@ import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
+import KitchenMenu from './pages/KitchenMenu';
 
 // 🚀 LAZY IMPORTS (Super Advanced Code-Splitting - Pages tabhi load honge jab unki zaroorat hogi)
 const Home = lazy(() => import('./pages/Home'));
@@ -115,6 +116,7 @@ export default function App() {
 
                   {/* Catch-all 404 Route */}
                   <Route path="*" element={<NotFound />} />
+                  <Route path="/provider/:id" element={<KitchenMenu />} />
                 </Routes>
               </Suspense>
             </main>
