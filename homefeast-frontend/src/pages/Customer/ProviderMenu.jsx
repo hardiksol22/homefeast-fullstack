@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom'; 
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext'; 
+import { useCart } from '../../context/CartContext'; // 🟢 NAYA: CartContext import kiya
 
 const ProviderMenu = () => {
-  const { id } = useParams(); // URL se cook/kitchen ki ID nikal li
+  const { id } = useParams(); 
+  const navigate = useNavigate(); 
+  const { user } = useAuth(); 
+  
+  // 🟢 NAYA: Dummy state hata kar asali CartContext use kiya
+  const { addToCart, cartCount } = useCart();
+
   const [menu, setMenu] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // Dummy cart state just for UI feel (Cart logic hum next step me banayenge)
-  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -32,12 +37,20 @@ const ProviderMenu = () => {
     fetchMenu();
   }, [id]);
 
-  const handleAddToCart = (dishName) => {
-    setCartCount(prev => prev + 1);
-    toast.success(`${dishName} added to cart! 🛒`, {
-      style: { background: '#10B981', color: '#080D12', fontWeight: 'bold' },
-      iconTheme: { primary: '#080D12', secondary: '#10B981' }
-    });
+  // 🟢 NAYA FIX: Ab dishName ki jagah poora 'dish' object pass hoga
+  const handleAddToCart = (dish) => {
+    
+    // 1. Agar user login nahi hai, toh usey roko aur Login page par bhejo
+    if (!user) {
+      toast.error("Please Sign In to order delicious food! 🍔", {
+        style: { background: '#F43F5E', color: '#F8FAFC', fontWeight: 'bold' }
+      });
+      navigate('/login');
+      return; 
+    }
+
+    // 2. Agar login hai, toh seedha Context me add karo (Kitchen Name ke sath)
+    addToCart(dish, "Chef's Kitchen"); 
   };
 
   const SkeletonLoader = () => (
@@ -73,16 +86,17 @@ const ProviderMenu = () => {
             ←
           </Link>
           
-          <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-[#080D12]/80 backdrop-blur-md border border-[#263241] flex items-center justify-center text-[#F8FAFC] hover:text-[#10B981] transition-colors shadow-lg cursor-pointer">
+          {/* 🟢 NAYA FIX: Cart Icon ko Clickable bana diya */}
+          <Link to="/cart" className="relative group block">
+            <div className="w-10 h-10 rounded-full bg-[#080D12]/80 backdrop-blur-md border border-[#263241] flex items-center justify-center text-[#F8FAFC] group-hover:text-[#10B981] group-hover:border-[#10B981] transition-all shadow-lg cursor-pointer">
               🛒
             </div>
             {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-[#10B981] text-[#080D12] w-5 h-5 flex items-center justify-center rounded-full text-xs font-black animate-bounce shadow-lg">
+              <span className="absolute -top-2 -right-2 bg-[#10B981] text-[#080D12] w-5 h-5 flex items-center justify-center rounded-full text-xs font-black animate-bounce shadow-[0_0_10px_rgba(16,185,129,0.5)]">
                 {cartCount}
               </span>
             )}
-          </div>
+          </Link>
         </div>
 
         {/* Kitchen Info (Bottom of Banner) */}
@@ -150,7 +164,7 @@ const ProviderMenu = () => {
                   </p>
 
                   <button 
-                    onClick={() => handleAddToCart(dish.name)}
+                    onClick={() => handleAddToCart(dish)} // 🟢 FIX: Poora dish object pass kiya
                     className="w-max hidden sm:flex items-center gap-2 px-6 py-2.5 bg-[#080D12] text-[#10B981] font-black rounded-xl border border-[#263241] hover:border-[#10B981] hover:bg-[#10B981]/10 transition-colors"
                   >
                     ADD TO CART <span className="text-lg">+</span>
@@ -167,7 +181,7 @@ const ProviderMenu = () => {
                   {/* Floating ADD Button for Mobile */}
                   <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 sm:hidden pb-8">
                     <button 
-                      onClick={() => handleAddToCart(dish.name)}
+                      onClick={() => handleAddToCart(dish)} // 🟢 FIX: Poora dish object pass kiya
                       className="px-8 py-2 bg-[#F8FAFC] text-[#080D12] text-sm font-black rounded-xl border border-[#E2E8F0] shadow-xl hover:bg-[#10B981] hover:text-[#080D12] hover:border-[#10B981] transition-colors"
                     >
                       ADD

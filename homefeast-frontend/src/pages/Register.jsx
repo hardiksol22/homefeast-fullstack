@@ -1,18 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const Register = () => {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    role: 'customer', // Default role customer rahega
-    kitchenName: ''   // Cook ke liye extra field
+    role: 'customer', 
+    kitchenName: ''   
   });
+  
+  const [loading, setLoading] = useState(false);
+  const [passStrength, setPassStrength] = useState(0);
+  const { login } = useAuth(); 
+  const navigate = useNavigate();
+
+  // 🛡️ SMART PASSWORD STRENGTH CALCULATOR
+  useEffect(() => {
+    let strength = 0;
+    const pass = formData.password;
+    if (pass.length > 5) strength += 25;
+    if (pass.length > 8) strength += 25;
+    if (pass.match(/[A-Z]/)) strength += 25;
+    if (pass.match(/[^a-zA-Z0-9]/)) strength += 25;
+    setPassStrength(strength);
+  }, [formData.password]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -21,160 +35,158 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // 🔴 Validation: Agar Cook hai toh Kitchen Name zaroori hai
-    if (formData.role === 'cook' && !formData.kitchenName.trim()) {
-      toast.error("Please enter your Kitchen Name!", {
-        style: { background: '#080D12', color: '#F4B942', border: '1px solid #F4B942' }
-      });
+    // Basic Smart Validation before calling API
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters long!", { style: { background: '#F43F5E', color: '#fff' } });
       return;
     }
 
     setLoading(true);
 
     try {
-      // 🟢 API Call to Backend
       const response = await fetch('https://homefeast-fullstack.onrender.com/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData) // Isme kitchenName automatically chala jayega
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
       if (response.ok) {
+        toast.success(`Welcome to HomeFeast, ${formData.name.split(' ')[0]}! 🎉`, {
+          style: { background: '#10B981', color: '#080D12', fontWeight: 'bold' }
+        });
+        
+        // Agar aapka API token return karta hai, toh auto-login karwa lijiye (Optional)
+        // if(data.token) login(data.user, data.token); 
+        
         if (formData.role === 'cook') {
-          toast.success(`🎉 ${formData.kitchenName} Registered Successfully!`, {
-            style: { background: '#10B981', color: '#080D12', fontWeight: 'bold' }
-          });
+          toast.success("Your kitchen is ready! Setup your menu now. 🍳", { icon: '👨‍🍳' });
+          navigate('/login'); // Ya '/cook' agar auto-login enabled hai
         } else {
-          toast.success("Account Created! Please Sign In. 🎉", {
-            style: { background: '#10B981', color: '#080D12', fontWeight: 'bold' }
-          });
+          navigate('/login'); // Ya '/explore' agar auto-login enabled hai
         }
-        // Registration ke baad seedha Login page par bhej do
-        navigate('/login');
       } else {
-        toast.error(data.message || "Registration failed. Try again.");
+        toast.error(data.message || "Registration failed. Email might be in use.");
       }
     } catch (error) {
       console.error("Register Error:", error);
-      toast.error("Server connection error. Please try again later.");
+      toast.error("Server connection error.");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] flex items-center justify-center pt-24 pb-12 px-4 relative overflow-hidden">
-      
-      {/* 🌟 Background Glowing Ambient Blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#10B981]/10 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#F4B942]/10 rounded-full blur-[120px] pointer-events-none"></div>
+  // UI Helpers for Password Meter
+  const getMeterColor = () => {
+    if (passStrength <= 25) return 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]';
+    if (passStrength <= 75) return 'bg-[#F4B942] shadow-[0_0_10px_rgba(244,185,66,0.5)]';
+    return 'bg-[#10B981] shadow-[0_0_10px_rgba(16,185,129,0.5)]';
+  };
+  const getMeterLabel = () => {
+    if (formData.password.length === 0) return 'Enter a password';
+    if (passStrength <= 25) return 'Weak';
+    if (passStrength <= 75) return 'Good';
+    return 'Strong 🔥';
+  };
 
-      {/* Glassmorphism Card */}
-      <div className="w-full max-w-md bg-[#111827]/80 backdrop-blur-xl p-8 rounded-[32px] border border-[#263241] shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10">
+  return (
+    <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] flex items-center justify-center p-4 relative overflow-hidden">
+      
+      {/* 🌟 Dynamic Ambient Glows based on Role */}
+      <div className={`absolute top-0 left-0 w-[500px] h-[500px] rounded-full blur-[150px] pointer-events-none transition-colors duration-700 ${formData.role === 'cook' ? 'bg-[#F4B942]/10' : 'bg-[#10B981]/10'}`}></div>
+      <div className={`absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-[150px] pointer-events-none transition-colors duration-700 ${formData.role === 'cook' ? 'bg-[#F4B942]/5' : 'bg-[#10B981]/5'}`}></div>
+
+      <div className="w-full max-w-md bg-[#111827]/80 backdrop-blur-xl border border-[#263241] rounded-[32px] p-8 sm:p-10 shadow-2xl relative z-10 transform transition-all duration-300 hover:border-[#263241]/80">
         
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-black mb-2">Join <span className="text-[#10B981]">HomeFeast</span></h2>
-          <p className="text-[#94A3B8] text-sm font-medium">Create an account to continue</p>
+          <Link to="/" className="text-3xl font-black tracking-tighter text-[#F8FAFC] inline-block mb-3 hover:scale-105 transition-transform">
+            Home<span className={formData.role === 'cook' ? 'text-[#F4B942] transition-colors' : 'text-[#10B981] transition-colors'}>Feast</span>.
+          </Link>
+          <h2 className="text-2xl font-bold mb-2">Join the Community</h2>
+          <p className="text-[#94A3B8] text-sm">Experience the best home-cooked meals.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           
-          {/* 🎛️ ROLE SELECTION (Smart Toggle) */}
-          <div className="flex bg-[#080D12] p-1.5 rounded-2xl border border-[#263241] mb-6">
+          {/* 🎚️ SMART SEGMENTED CONTROL */}
+          <div className="relative flex p-1 bg-[#080D12] rounded-xl border border-[#263241] mb-8">
+            {/* Sliding Background Indicator */}
+            <div 
+              className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-out shadow-lg"
+              style={{ 
+                left: formData.role === 'customer' ? '4px' : 'calc(50%)',
+                backgroundColor: formData.role === 'customer' ? '#10B981' : '#F4B942'
+              }}
+            ></div>
+            
             <button
               type="button"
               onClick={() => setFormData({ ...formData, role: 'customer', kitchenName: '' })}
-              className={`flex-1 py-2.5 text-sm font-black rounded-xl transition-all ${
-                formData.role === 'customer' 
-                  ? 'bg-[#10B981] text-[#080D12] shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
-                  : 'text-[#64748B] hover:text-[#F8FAFC]'
-              }`}
+              className={`relative z-10 flex-1 py-3 text-sm font-black tracking-wide rounded-lg transition-colors duration-300 ${formData.role === 'customer' ? 'text-[#080D12]' : 'text-[#64748B] hover:text-[#94A3B8]'}`}
             >
-              Order Food 🍲
+              FOODIE 🍔
             </button>
             <button
               type="button"
               onClick={() => setFormData({ ...formData, role: 'cook' })}
-              className={`flex-1 py-2.5 text-sm font-black rounded-xl transition-all ${
-                formData.role === 'cook' 
-                  ? 'bg-[#F4B942] text-[#080D12] shadow-[0_0_15px_rgba(244,185,66,0.4)]' 
-                  : 'text-[#64748B] hover:text-[#F8FAFC]'
-              }`}
+              className={`relative z-10 flex-1 py-3 text-sm font-black tracking-wide rounded-lg transition-colors duration-300 ${formData.role === 'cook' ? 'text-[#080D12]' : 'text-[#64748B] hover:text-[#94A3B8]'}`}
             >
-              Sell Food 👨‍🍳
+              CHEF 👨‍🍳
             </button>
           </div>
 
-          {/* Full Name Input */}
-          <div>
-            <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Full Name</label>
-            <input 
-              type="text" name="name" required
-              value={formData.name} onChange={handleChange}
-              placeholder={formData.role === 'cook' ? "Chef's Full Name" : "Your Name"}
-              className="w-full px-4 py-3.5 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] placeholder-[#64748B] focus:outline-none focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] transition-all"
-            />
+          {/* Input Fields */}
+          <div className="relative group">
+            <input type="text" name="name" id="name" required value={formData.name} onChange={handleChange} className={`peer w-full px-4 pt-6 pb-2 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:outline-none focus:border-transparent focus:ring-1 transition-all placeholder-transparent ${formData.role === 'cook' ? 'focus:ring-[#F4B942]' : 'focus:ring-[#10B981]'}`} placeholder="Full Name" />
+            <label htmlFor="name" className={`absolute text-[11px] font-bold text-[#64748B] uppercase tracking-wider top-2 left-4 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-4 peer-focus:top-2 peer-focus:text-[11px] ${formData.role === 'cook' ? 'peer-focus:text-[#F4B942]' : 'peer-focus:text-[#10B981]'}`}>Full Name</label>
           </div>
 
-          {/* 🟢 SMART KITCHEN NAME INPUT (Only shows if role is 'cook') */}
-          {formData.role === 'cook' && (
-            <div className="animate-fade-in-up">
-              <label className="block text-xs font-bold text-[#F4B942] uppercase tracking-wider mb-2">Kitchen Name 🏪</label>
-              <input 
-                type="text" name="kitchenName" required={formData.role === 'cook'}
-                value={formData.kitchenName} onChange={handleChange}
-                placeholder="e.g., Sharma Ji Ka Dhaba"
-                className="w-full px-4 py-3.5 bg-[#F4B942]/5 border border-[#F4B942]/30 rounded-xl text-[#F8FAFC] placeholder-[#64748B] focus:outline-none focus:border-[#F4B942] focus:ring-1 focus:ring-[#F4B942] transition-all shadow-[0_0_10px_rgba(244,185,66,0.1)]"
-              />
-              <p className="text-[10px] text-[#64748B] mt-1.5 ml-1">This name will be shown to customers.</p>
+          <div className="relative group">
+            <input type="email" name="email" id="email" required value={formData.email} onChange={handleChange} className={`peer w-full px-4 pt-6 pb-2 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:outline-none focus:border-transparent focus:ring-1 transition-all placeholder-transparent ${formData.role === 'cook' ? 'focus:ring-[#F4B942]' : 'focus:ring-[#10B981]'}`} placeholder="Email Address" />
+            <label htmlFor="email" className={`absolute text-[11px] font-bold text-[#64748B] uppercase tracking-wider top-2 left-4 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-4 peer-focus:top-2 peer-focus:text-[11px] ${formData.role === 'cook' ? 'peer-focus:text-[#F4B942]' : 'peer-focus:text-[#10B981]'}`}>Email Address</label>
+          </div>
+
+          <div className="relative group">
+            <input type="password" name="password" id="password" required value={formData.password} onChange={handleChange} className={`peer w-full px-4 pt-6 pb-2 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] focus:outline-none focus:border-transparent focus:ring-1 transition-all placeholder-transparent ${formData.role === 'cook' ? 'focus:ring-[#F4B942]' : 'focus:ring-[#10B981]'}`} placeholder="Password" />
+            <label htmlFor="password" className={`absolute text-[11px] font-bold text-[#64748B] uppercase tracking-wider top-2 left-4 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-4 peer-focus:top-2 peer-focus:text-[11px] ${formData.role === 'cook' ? 'peer-focus:text-[#F4B942]' : 'peer-focus:text-[#10B981]'}`}>Password</label>
+          </div>
+
+          {/* 🛡️ PASSWORD STRENGTH METER */}
+          <div className="px-1 mt-1 mb-4">
+            <div className="flex justify-between items-center mb-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Security</span>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${passStrength > 75 ? 'text-[#10B981]' : passStrength > 25 ? 'text-[#F4B942]' : 'text-[#64748B]'}`}>
+                {getMeterLabel()}
+              </span>
             </div>
-          )}
-
-          {/* Email Input */}
-          <div>
-            <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Email Address</label>
-            <input 
-              type="email" name="email" required
-              value={formData.email} onChange={handleChange}
-              placeholder="you@example.com"
-              className="w-full px-4 py-3.5 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] placeholder-[#64748B] focus:outline-none focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] transition-all"
-            />
+            <div className="w-full h-1.5 bg-[#080D12] rounded-full overflow-hidden border border-[#263241]">
+              <div 
+                className={`h-full transition-all duration-500 ease-out ${getMeterColor()}`}
+                style={{ width: `${Math.max(passStrength, 5)}%` }}
+              ></div>
+            </div>
           </div>
 
-          {/* Password Input */}
-          <div>
-            <label className="block text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-2">Password</label>
-            <input 
-              type="password" name="password" required minLength="6"
-              value={formData.password} onChange={handleChange}
-              placeholder="••••••••"
-              className="w-full px-4 py-3.5 bg-[#080D12] border border-[#263241] rounded-xl text-[#F8FAFC] placeholder-[#64748B] focus:outline-none focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] transition-all"
-            />
+          {/* 🟢 CONDITIONAL KITCHEN FIELD (SMART ANIMATION) */}
+          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${formData.role === 'cook' ? 'max-h-24 opacity-100 mb-2' : 'max-h-0 opacity-0 mb-0'}`}>
+            <div className="relative group mt-2">
+              <input type="text" name="kitchenName" id="kitchenName" required={formData.role === 'cook'} value={formData.kitchenName} onChange={handleChange} className="peer w-full px-4 pt-6 pb-2 bg-[#F4B942]/10 border border-[#F4B942]/30 rounded-xl text-[#F4B942] focus:outline-none focus:border-[#F4B942] focus:ring-1 focus:ring-[#F4B942] transition-all placeholder-transparent font-bold" placeholder="Kitchen Name" />
+              <label htmlFor="kitchenName" className="absolute text-[11px] font-bold text-[#F4B942] uppercase tracking-wider top-2 left-4 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-4 peer-focus:top-2 peer-focus:text-[11px]">Your Kitchen Name 🍳</label>
+            </div>
           </div>
 
-          {/* Submit Button */}
-          <button 
-            type="submit" disabled={loading}
-            className={`w-full py-4 text-[#080D12] font-black rounded-xl transition-all shadow-lg uppercase tracking-wider mt-4 ${
-              formData.role === 'cook' 
-                ? 'bg-[#F4B942] hover:bg-[#D9A02E] shadow-[0_0_20px_rgba(244,185,66,0.3)] hover:shadow-[0_0_30px_rgba(244,185,66,0.5)]' 
-                : 'bg-[#10B981] hover:bg-[#059669] shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]'
-            }`}
-          >
-            {loading ? 'Creating Account...' : (formData.role === 'cook' ? 'Register Your Kitchen 🚀' : 'Create Account')}
+          <button type="submit" disabled={loading} className={`w-full py-4 font-black text-lg rounded-xl transition-all duration-300 transform hover:-translate-y-1 disabled:opacity-70 disabled:transform-none mt-6 flex justify-center items-center gap-2 ${formData.role === 'cook' ? 'bg-[#F4B942] text-[#080D12] hover:bg-[#D9A02E] shadow-[0_0_20px_rgba(244,185,66,0.3)] hover:shadow-[0_10px_30px_rgba(244,185,66,0.5)]' : 'bg-[#10B981] text-[#080D12] hover:bg-[#059669] shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_10px_30px_rgba(16,185,129,0.5)]'}`}>
+            {loading ? <span className="animate-pulse">Setting up...</span> : formData.role === 'cook' ? 'Start Your Kitchen 🚀' : 'Start Ordering 🚀'}
           </button>
-
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-[#64748B] text-sm">
-            Already have an account? <Link to="/login" className="text-[#10B981] font-bold hover:underline">Sign In</Link>
-          </p>
-        </div>
+        <p className="text-center text-[#94A3B8] mt-8 text-sm">
+          Already a member? <Link to="/login" className={`font-bold hover:underline transition-colors ${formData.role === 'cook' ? 'text-[#F4B942]' : 'text-[#10B981]'}`}>Sign In here</Link>
+        </p>
+
       </div>
     </div>
   );
