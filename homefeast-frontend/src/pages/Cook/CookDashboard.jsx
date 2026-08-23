@@ -28,7 +28,7 @@ const CookDashboard = () => {
   const chefEmail = user?.email || user?.user?.email || "chef@homefeast.com";
 
   // ==========================================
-  // 👥 TEAM MANAGEMENT STATE
+  // 👥 TEAM MANAGEMENT LOGIC
   // ==========================================
   const [teamMembers, setTeamMembers] = useState([
     { id: 1, name: chefName, role: 'Head Culinary Specialist', experience: '8+ Years' }
@@ -181,10 +181,9 @@ const CookDashboard = () => {
   const todaysRevenue = activeOrders.reduce((total, order) => total + (order.totalAmount || order.total || 0), 0);
 
   return (
-    // 🟢 FIX: Added pt-[88px] so it starts below Navbar perfectly
     <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] flex flex-col md:flex-row pt-[88px]">
       
-      {/* 📱 SIDEBAR - Fixed height considering Navbar */}
+      {/* ================= 📱 SIDEBAR ================= */}
       <aside className="w-full md:w-64 bg-[#111827] border-r border-[#263241] p-6 hidden md:flex flex-col h-[calc(100vh-88px)] sticky top-[88px] z-20">
         <div className="mb-8">
           <h2 className="text-xl font-black text-[#F4B942] truncate" title={kitchenName}>{kitchenName}</h2>
@@ -194,6 +193,7 @@ const CookDashboard = () => {
         </div>
         
         <nav className="flex-1 space-y-3 overflow-y-auto hide-scrollbar">
+          
           <button 
             onClick={() => setActiveTab('orders')}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'orders' ? 'bg-[#F4B942]/10 text-[#F4B942] border border-[#F4B942]/20 shadow-[0_0_15px_rgba(244,185,66,0.1)]' : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border border-transparent'}`}
@@ -209,7 +209,7 @@ const CookDashboard = () => {
             🍲 Manage Menu
           </button>
 
-          {/* 🟢 THE TEAM TAB */}
+          {/* 👥 MANAGE TEAM OPTION INSIDE SIDEBAR */}
           <button 
             onClick={() => setActiveTab('team')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'team' ? 'bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border border-transparent'}`}
@@ -230,6 +230,7 @@ const CookDashboard = () => {
           >
             👤 Chef Profile
           </button>
+
         </nav>
 
         <div className="mt-4 pt-6 border-t border-[#263241]">
@@ -237,7 +238,7 @@ const CookDashboard = () => {
         </div>
       </aside>
 
-      {/* 📊 MAIN CONTENT */}
+      {/* ================= 📊 MAIN CONTENT ================= */}
       <main className="flex-1 p-6 sm:p-10 overflow-y-auto relative">
         <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[#F4B942]/5 rounded-full blur-[120px] pointer-events-none"></div>
 
@@ -273,7 +274,7 @@ const CookDashboard = () => {
           </div>
         </div>
 
-        {/* 🔀 CONDITIONAL RENDERING (ORDERS / MENU / TEAM / PAYOUTS / PROFILE) */}
+        {/* 🔀 TABS RENDERING */}
         
         {/* ==================== ORDERS TAB ==================== */}
         {activeTab === 'orders' && (
@@ -429,11 +430,11 @@ const CookDashboard = () => {
           </div>
         )}
 
-        {/* ==================== 👥 TEAM MANAGEMENT TAB ==================== */}
+        {/* ==================== 👥 TEAM TAB ==================== */}
         {activeTab === 'team' && (
           <div className="flex flex-col xl:flex-row gap-8 relative z-10 animate-fade-in-up">
             
-            {/* 📝 Add New Team Member Form */}
+            {/* Add Team Member Form */}
             <div className="w-full xl:w-[400px] shrink-0">
               <div className="bg-[#111827]/80 backdrop-blur-xl p-8 rounded-[32px] border border-[#263241] shadow-2xl xl:sticky xl:top-[40px]">
                 <h2 className="text-2xl font-black mb-8 flex items-center gap-3">
@@ -469,7 +470,7 @@ const CookDashboard = () => {
               </div>
             </div>
 
-            {/* 👥 Current Team Roster Grid */}
+            {/* Current Team Display */}
             <div className="w-full xl:flex-1">
               <h2 className="text-xl font-black mb-6 flex items-center gap-3 px-2">
                 Your Active Team <span className="px-2.5 py-1 bg-[#10B981]/20 text-[#10B981] rounded-lg text-xs tracking-widest">{teamMembers.length} MEMBERS</span>
@@ -478,7 +479,6 @@ const CookDashboard = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {teamMembers.map((member, index) => (
                   <div key={member.id} className="bg-[#111827] border border-[#263241] rounded-[24px] overflow-hidden group flex flex-col shadow-lg hover:border-[#3B82F6]/50 transition-all p-6 relative">
-                    
                     {index === 0 && <div className="absolute top-4 right-4 text-2xl">👑</div>}
                     {index !== 0 && (
                       <button 
