@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // 🟢 useNavigate add kiya
+import { useAuth } from '../context/AuthContext'; // 🟢 useAuth import kiya (Path check kar lena agar alag folder mein ho)
 
 const CustomerDashboard = () => {
+  const navigate = useNavigate(); // 🟢 Navigation ke liye
+  const { user } = useAuth(); // 🟢 Logged-in user ka data
+  
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -12,6 +16,14 @@ const CustomerDashboard = () => {
   const [greeting, setGreeting] = useState("");
   const [moodSuggestion, setMoodSuggestion] = useState("");
   const [smartFilter, setSmartFilter] = useState("All");
+
+  // 🟢 NAYA SECURITY LOGIC: Agar Cook hai, toh usko Cook Dashboard bhej do!
+  useEffect(() => {
+    const userRole = user?.role || user?.user?.role;
+    if (userRole === 'cook') {
+      navigate('/cook-dashboard');
+    }
+  }, [user, navigate]);
 
   const dietOptions = ["All", "Veg", "Non-Veg"];
 
@@ -183,7 +195,7 @@ const CustomerDashboard = () => {
             {filteredProviders.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mt-10">
                 {filteredProviders.map((provider) => {
-                  const chefTeamCount = provider.chefsCount || 2; // Dynamic team member count
+                  const chefTeamCount = provider.chefsCount || 2; 
 
                   return (
                     <div key={provider._id} className="bg-[#111827] border border-[#263241] rounded-[32px] overflow-visible group flex flex-col hover:border-[#10B981]/40 hover:shadow-[0_20px_40px_rgba(16,185,129,0.15)] transition-all duration-500 transform hover:-translate-y-2 h-full mt-6">
@@ -216,7 +228,7 @@ const CustomerDashboard = () => {
                           </div>
                         </div>
                         
-                        {/* 🟢 Chef Team Count Badge */}
+                        {/* Chef Team Count Badge */}
                         <div className="my-2.5 inline-flex items-center gap-2 bg-[#1E293B] border border-[#263241] px-3 py-1 rounded-xl w-fit">
                           <span className="text-xs">👥</span>
                           <span className="text-xs font-bold text-[#94A3B8]">Chef Team: <strong className="text-[#F8FAFC]">{chefTeamCount} Active Chefs</strong></span>

@@ -4,18 +4,18 @@ import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { Toaster } from 'react-hot-toast';
 
-// 🟢 REGULAR IMPORTS (Navbar, Footer, ProtectedRoute hamesha turant dikhne chahiye)
+// 🟢 REGULAR IMPORTS
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
-import KitchenMenu from './pages/KitchenMenu';
 
-// 🚀 LAZY IMPORTS (Super Advanced Code-Splitting - Pages tabhi load honge jab unki zaroorat hogi)
+// 🚀 LAZY IMPORTS (Super Advanced Code-Splitting)
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const CustomerDashboard = lazy(() => import('./pages/Customer/CustomerDashboard'));
-const ProviderMenu = lazy(() => import('./pages/Customer/ProviderMenu'));
+// 🟢 FIX: ProviderMenu hata kar KitchenMenu ko set kiya
+const KitchenMenu = lazy(() => import('./pages/KitchenMenu')); 
 const Cart = lazy(() => import('./pages/Customer/Cart'));
 const Orders = lazy(() => import('./pages/Customer/Orders'));
 const Wishlist = lazy(() => import('./pages/Customer/Wishlist'));
@@ -25,7 +25,7 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 const Chefs = lazy(() => import('./pages/Customer/Chefs'));
 const Offers = lazy(() => import('./pages/Customer/Offers'));
 
-// 📜 SMART SCROLL-TO-TOP COMPONENT (Page badalne par hamesha top par le aayega)
+// 📜 SMART SCROLL-TO-TOP COMPONENT
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -34,13 +34,11 @@ const ScrollToTop = () => {
   return null;
 };
 
-// ✨ PREMIUM LOADING SCREEN (Jab tak lazy page load ho raha hai, yeh dikhega)
+// ✨ PREMIUM LOADING SCREEN
 const PremiumLoader = () => (
   <div className="min-h-[70vh] flex flex-col items-center justify-center bg-[#080D12] relative z-50">
     <div className="relative w-20 h-20 flex items-center justify-center">
-      {/* Outer Spinning Ring */}
       <div className="absolute inset-0 border-4 border-[#263241] border-t-[#10B981] border-r-[#F4B942] rounded-full animate-spin"></div>
-      {/* Inner Pulsing Dot */}
       <div className="w-8 h-8 bg-[#10B981] rounded-full animate-pulse shadow-[0_0_20px_rgba(16,185,129,0.6)]"></div>
     </div>
     <p className="text-[#94A3B8] font-black tracking-[0.2em] uppercase text-xs mt-6 animate-pulse">
@@ -77,7 +75,7 @@ export default function App() {
             
             <Navbar />
 
-            {/* Dynamic Route Content wrapped in Suspense for Lazy Loading */}
+            {/* Dynamic Route Content */}
             <main className="flex-1 relative">
               <Suspense fallback={<PremiumLoader />}>
                 <Routes>
@@ -89,7 +87,8 @@ export default function App() {
                   {/* Open Customer Routes */}
                   <Route path="/explore" element={<CustomerDashboard />} />
                   <Route path="/customer" element={<CustomerDashboard />} />
-                  <Route path="/provider/:id" element={<ProviderMenu />} />
+                  {/* 🟢 FIX: Ek hi valid Kitchen Menu Route */}
+                  <Route path="/provider/:id" element={<KitchenMenu />} /> 
                   <Route path="/chefs" element={<Chefs />} />
                   <Route path="/offers" element={<Offers />} />
                   
@@ -105,7 +104,8 @@ export default function App() {
                   } />
                   
                   {/* 🔒 Protected Cook Routes */}
-                  <Route path="/cook" element={
+                  {/* 🟢 FIX: Route ko `/cook-dashboard` kar diya taaki redirect match kare */}
+                  <Route path="/cook-dashboard" element={
                     <ProtectedRoute allowedRole="cook"><CookDashboard /></ProtectedRoute>
                   } />
                   
@@ -116,7 +116,6 @@ export default function App() {
 
                   {/* Catch-all 404 Route */}
                   <Route path="*" element={<NotFound />} />
-                  <Route path="/provider/:id" element={<KitchenMenu />} />
                 </Routes>
               </Suspense>
             </main>
