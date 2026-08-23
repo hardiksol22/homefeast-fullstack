@@ -1,7 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // 🟢 useNavigate add kiya
+import toast from 'react-hot-toast'; // 🟢 toast add kiya
+import { useAuth } from '../../context/AuthContext'; // 🟢 useAuth add kiya (path check kar lena)
 
 const Chefs = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  // 🟢 SECURITY LAYER: Agar Cook hai, toh usko Cook Dashboard bhej do!
+  const userRole = user?.role || user?.user?.role;
+  useEffect(() => {
+    if (userRole === 'cook') {
+      toast.error("Chefs cannot access the customer directory! 👨‍🍳", { id: 'chef-security' });
+      navigate('/cook-dashboard');
+    }
+  }, [userRole, navigate]);
+
   const [chefs, setChefs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [aiMatchLoading, setAiMatchLoading] = useState(false);
