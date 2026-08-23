@@ -14,7 +14,6 @@ const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const CustomerDashboard = lazy(() => import('./pages/Customer/CustomerDashboard'));
-// 🟢 FIX: ProviderMenu hata kar KitchenMenu ko set kiya
 const KitchenMenu = lazy(() => import('./pages/KitchenMenu')); 
 const Cart = lazy(() => import('./pages/Customer/Cart'));
 const Orders = lazy(() => import('./pages/Customer/Orders'));
@@ -87,7 +86,6 @@ export default function App() {
                   {/* Open Customer Routes */}
                   <Route path="/explore" element={<CustomerDashboard />} />
                   <Route path="/customer" element={<CustomerDashboard />} />
-                  {/* 🟢 FIX: Ek hi valid Kitchen Menu Route */}
                   <Route path="/provider/:id" element={<KitchenMenu />} /> 
                   <Route path="/chefs" element={<Chefs />} />
                   <Route path="/offers" element={<Offers />} />
@@ -104,7 +102,10 @@ export default function App() {
                   } />
                   
                   {/* 🔒 Protected Cook Routes */}
-                  {/* 🟢 FIX: Route ko `/cook-dashboard` kar diya taaki redirect match kare */}
+                  {/* 🟢 FIX: Yahan dono routes add kar diye hain */}
+                  <Route path="/cook" element={
+                    <ProtectedRoute allowedRole="cook"><CookDashboard /></ProtectedRoute>
+                  } />
                   <Route path="/cook-dashboard" element={
                     <ProtectedRoute allowedRole="cook"><CookDashboard /></ProtectedRoute>
                   } />
