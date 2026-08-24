@@ -84,9 +84,53 @@ const getUserOrders = async (req, res) => {
   }
 };
 
+// 🛑 4. CANCEL ORDER & INITIATE REFUND (NAYA FUNCTION)
+const cancelAndRefundOrder = async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    
+    // 1. Order find karo
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    // 2. Check karo ki order cancel hone layak hai ya nahi
+    if (order.orderStatus !== 'Placed') {
+      return res.status(400).json({ message: "Order cannot be cancelled at this stage." });
+    }
+
+    // 3. Razorpay Setup
+    const instance = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
+    // 4. Initiate Refund via Razorpay API
+    const refund = await instance.payments.refund(order.razorpayPaymentId);
+
+    if (refund.status === 'processed') {
+      // 5. Update Database status
+      order.orderStatus = 'Cancelled';
+      order.paymentStatus = 'Refunded';
+      await order.save();
+
+      return res.status(200).json({ 
+        message: "Order cancelled and Refund initiated successfully! 💸", 
+        order 
+      });
+    } else {
+      return res.status(400).json({ message: "Refund failed at payment gateway." });
+    }
+
+  } catch (error) {
+    console.error("Refund Error:", error);
+    res.status(500).json({ message: "Server error while processing refund." });
+  }
+};
+
 // YAHAN SE EXPORT HOTA HAI
 module.exports = { 
   createOrder, 
   verifyPayment,
-  getUserOrders
+  getUserOrders,
+  cancelAndRefundOrder // 👈 Naya function yahan export me add kiya gaya hai
 };

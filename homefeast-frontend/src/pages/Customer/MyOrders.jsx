@@ -5,6 +5,9 @@ import toast from 'react-hot-toast';
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // 🟢 NAYA: Cancelling state add kiya hai UI loading ke liye
+  const [cancelling, setCancelling] = useState(null); 
 
   // ⚠️ Abhi ke liye wahi same dummy User ID le rahe hain jo Cart me dali thi
   const userId = "64f1b2c3d4e5f6a7b8c9d0e1"; 
@@ -24,7 +27,39 @@ const MyOrders = () => {
     };
 
     fetchOrders();
-  }, []);
+  }, [userId]);
+
+  // 🛑 NAYA: CANCEL ORDER & REFUND FUNCTION
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm("Are you sure you want to cancel this order? The amount will be refunded to your bank account.")) return;
+    
+    setCancelling(orderId);
+    const toastId = toast.loading("Initiating refund...");
+
+    try {
+      const res = await fetch('https://homefeast-fullstack.onrender.com/api/payment/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.success(data.message, { id: toastId });
+        // UI ko turant update karenge 'Cancelled' aur 'Refunded' show karne ke liye
+        setOrders(prev => prev.map(order => 
+          order._id === orderId ? { ...order, orderStatus: 'Cancelled', paymentStatus: 'Refunded' } : order
+        ));
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to cancel order", { id: toastId });
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] pt-32 pb-20 relative overflow-hidden">
@@ -53,8 +88,20 @@ const MyOrders = () => {
         ) : (
           <div className="space-y-6">
             {orders.map((order) => (
-              <div key={order._id} className="bg-[#111827] border border-[#263241] p-6 rounded-3xl shadow-lg transition-all hover:border-[#10B981]/50">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-[#263241] pb-4">
+              <div key={order._id} className="bg-[#111827] border border-[#263241] p-6 rounded-3xl shadow-lg transition-all hover:border-[#10B981]/50 relative">
+                
+                {/* 🛑 NAYA: CANCEL BUTTON (Sirf 'Placed' order pe dikhega) */}
+                {order.orderStatus === 'Placed' && (
+                  <button 
+                    onClick={() => handleCancelOrder(order._id)}
+                    disabled={cancelling === order._id}
+                    className="absolute top-6 right-6 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-sm font-bold rounded-lg transition-all disabled:opacity-50"
+                  >
+                    {cancelling === order._id ? "Cancelling..." : "Cancel Order"}
+                  </button>
+                )}
+
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-[#263241] pb-4 pr-32">
                   <div>
                     <p className="text-[12px] text-[#94A3B8] font-bold uppercase tracking-widest mb-1">Order ID: {order._id}</p>
                     <p className="text-[#F8FAFC] font-medium">Placed on: {new Date(order.createdAt).toLocaleDateString()}</p>
@@ -63,19 +110,23 @@ const MyOrders = () => {
                     <span className={`px-4 py-1.5 rounded-full text-sm font-black border ${
                       order.orderStatus === 'Placed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 
                       order.orderStatus === 'Delivered' ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20' : 
+                      order.orderStatus === 'Cancelled' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
                       'bg-orange-500/10 text-orange-400 border-orange-500/20'
                     }`}>
                       {order.orderStatus}
                     </span>
-                    <span className="px-4 py-1.5 rounded-full text-sm font-black bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20">
-                      Paid
+                    <span className={`px-4 py-1.5 rounded-full text-sm font-black border ${
+                       order.paymentStatus === 'Refunded' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                       'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20'
+                    }`}>
+                      {order.paymentStatus || "Paid"}
                     </span>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   {order.items.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center">
+                    <div key={index} className="flex justify-between items-center opacity-90">
                       <div className="flex items-center gap-3">
                         <span className="w-8 h-8 rounded-lg bg-[#1E293B] flex justify-center items-center font-black text-xs text-[#94A3B8]">{item.quantity}x</span>
                         <span className="font-bold text-[#E2E8F0]">{item.name}</span>
