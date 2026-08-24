@@ -2,7 +2,7 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Order = require('../models/Order'); // MongoDB Order Model
 
-// 🟢 1. CREATE ORDER (Frontend jab Checkout dabayega)
+// 🟢 1. CREATE ORDER
 const createOrder = async (req, res) => {
   try {
     const instance = new Razorpay({
@@ -13,7 +13,7 @@ const createOrder = async (req, res) => {
     const { amount } = req.body;
     
     const options = {
-      amount: amount * 100, // Amount ko paise me convert kiya
+      amount: Math.round(amount * 100), // Paise me convert kiya
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
     };
@@ -27,7 +27,7 @@ const createOrder = async (req, res) => {
   }
 };
 
-// 🟢 2. VERIFY PAYMENT & SAVE ORDER TO DATABASE
+// 🟢 2. VERIFY PAYMENT & SAVE ORDER
 const verifyPayment = async (req, res) => {
   try {
     const { 
@@ -39,7 +39,6 @@ const verifyPayment = async (req, res) => {
       totalAmount 
     } = req.body;
     
-    // Security ke liye signature verify karna
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSign = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -47,8 +46,6 @@ const verifyPayment = async (req, res) => {
       .digest("hex");
 
     if (razorpay_signature === expectedSign) {
-      
-      // Signature match hone par naya order MongoDB me save karna
       const newOrder = new Order({
         user: userId,
         items: items,
@@ -75,11 +72,10 @@ const verifyPayment = async (req, res) => {
   }
 };
 
-// 🟢 3. GET USER ORDERS (Frontend par "My Orders" page ke liye)
+// 🟢 3. GET USER ORDERS
 const getUserOrders = async (req, res) => {
   try {
     const userId = req.params.userId;
-    // User ke saare orders nikalo aur naye wale sabse upar dikhao (-1)
     const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
     res.status(200).json(orders);
   } catch (error) {
@@ -88,7 +84,7 @@ const getUserOrders = async (req, res) => {
   }
 };
 
-// Saare functions ko routes me use karne ke liye export kiya
+// YAHAN SE EXPORT HOTA HAI
 module.exports = { 
   createOrder, 
   verifyPayment,
