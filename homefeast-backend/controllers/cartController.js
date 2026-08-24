@@ -1,17 +1,21 @@
 const Cart = require('../models/Cart');
 
-// 🛡️ HELPER FUNCTION: To safely extract user ID whether it's 'id' or '_id'
+// 🛡️ SUPER SAFE HELPER: Token se ID nikalne ke saare possible tarike
 const getUserId = (req) => {
-  return req.user._id || req.user.id;
+  const id = req.user._id || req.user.id || req.user.userId;
+  if (!id) console.error("🚨 CRITICAL: Token verified but User ID missing in payload!", req.user);
+  return id;
 };
 
 // 1. Get User's Cart
 const getCart = async (req, res) => {
   try {
     const userId = getUserId(req);
+    if (!userId) return res.status(400).json({ message: "User ID missing in token payload." });
+
     let cart = await Cart.findOne({ user: userId }).populate({
       path: 'items.dish',
-      select: 'name price image type cook' // Dish ki details
+      select: 'name price image type cook'
     });
 
     if (!cart) {
@@ -19,53 +23,56 @@ const getCart = async (req, res) => {
     }
     res.status(200).json(cart);
   } catch (error) {
+    console.error("Get Cart Error:", error);
     res.status(500).json({ message: "Error fetching cart: " + error.message });
   }
 };
 
-// 2. Add Item to Cart (Ya quantity badhayein agar pehle se hai)
+// 2. Add Item to Cart
 const addToCart = async (req, res) => {
   try {
     const userId = getUserId(req);
+    if (!userId) return res.status(400).json({ message: "User ID missing in token payload." });
+
     const { dishId } = req.body;
-    
+    if (!dishId) return res.status(400).json({ message: "Dish ID is missing in request body." });
+
     let cart = await Cart.findOne({ user: userId });
 
     if (!cart) {
-      cart = new Cart({ user: userId, items: [] }); // Error yahan aata tha, ab fix ho gaya!
+      cart = new Cart({ user: userId, items: [] });
     }
 
-    const itemIndex = cart.items.findIndex(item => item.dish.toString() === dishId);
+    // 🟢 FIX: Agar database me item.dish 'null' ho, toh toString() crash na kare!
+    const itemIndex = cart.items.findIndex(item => item.dish && item.dish.toString() === dishId);
     
     if (itemIndex > -1) {
-      cart.items[itemIndex].quantity += 1; // Pehle se hai toh quantity +1
+      cart.items[itemIndex].quantity += 1; 
     } else {
-      cart.items.push({ dish: dishId, quantity: 1 }); // Naya item
+      cart.items.push({ dish: dishId, quantity: 1 });
     }
 
     await cart.save();
     cart = await cart.populate('items.dish');
     res.status(200).json(cart);
   } catch (error) {
+    console.error("Add to Cart Error:", error);
     res.status(500).json({ message: "Error adding to cart: " + error.message });
   }
 };
 
-// 3. Update Item Quantity (+ / -)
+// 3. Update Item Quantity
 const updateCartItemQuantity = async (req, res) => {
   try {
     const userId = getUserId(req);
-    
-    // 🟢 FIX: Frontend se kabhi itemId aata hai aur kabhi dishId, hum dono handle kar lenge
     const targetId = req.body.dishId || req.body.itemId; 
     const { quantity } = req.body;
     
     let cart = await Cart.findOne({ user: userId });
     if(!cart) return res.status(404).json({ message: "Cart not found" });
 
-    // Match by dishId OR the subdocument _id
     const itemIndex = cart.items.findIndex(
-      item => item.dish.toString() === targetId || item._id.toString() === targetId
+      item => (item.dish && item.dish.toString() === targetId) || (item._id && item._id.toString() === targetId)
     );
     
     if (itemIndex > -1) {
@@ -76,6 +83,7 @@ const updateCartItemQuantity = async (req, res) => {
     cart = await cart.populate('items.dish');
     res.status(200).json(cart);
   } catch (error) {
+    console.error("Update Cart Error:", error);
     res.status(500).json({ message: "Error updating quantity: " + error.message });
   }
 };
@@ -84,16 +92,13 @@ const updateCartItemQuantity = async (req, res) => {
 const removeFromCart = async (req, res) => {
   try {
     const userId = getUserId(req);
-    
-    // 🟢 FIX: Param se aane wali koi bhi ID nikal lega automatically
     const targetId = req.params.dishId || req.params.itemId || Object.values(req.params)[0];
 
     let cart = await Cart.findOne({ user: userId });
 
     if (cart) {
-      // Remove matching dish ID OR matching subdocument ID
       cart.items = cart.items.filter(
-        item => item.dish.toString() !== targetId && item._id.toString() !== targetId
+        item => (item.dish && item.dish.toString() !== targetId) && (item._id && item._id.toString() !== targetId)
       );
       await cart.save();
     }
@@ -101,6 +106,7 @@ const removeFromCart = async (req, res) => {
     cart = await cart.populate('items.dish');
     res.status(200).json(cart);
   } catch (error) {
+    console.error("Remove from Cart Error:", error);
     res.status(500).json({ message: "Error removing from cart: " + error.message });
   }
 };
