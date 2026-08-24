@@ -174,9 +174,8 @@ const Cart = () => {
     }
 
     try {
-      // Step 2: Contact YOUR Backend to create a real Razorpay Order
-      // API needs to return { id: "order_xyz", amount: 50000, currency: "INR" }
-      const createOrderRes = await fetch('https://homefeast-fullstack.onrender.com/api/payment/create-order', {
+      // 🟢 FIX: URL updated to /api/payment/order (As per your new backend routes)
+      const createOrderRes = await fetch('https://homefeast-fullstack.onrender.com/api/payment/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ amount: grandTotal }) 
@@ -190,7 +189,7 @@ const Cart = () => {
 
       // Step 3: Open Real Razorpay Popup
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "YOUR_RAZORPAY_KEY_ID", // Change this in your .env file
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "YOUR_RAZORPAY_KEY_ID", 
         amount: orderData.amount,
         currency: orderData.currency,
         name: "HomeFeast",
@@ -202,23 +201,23 @@ const Cart = () => {
           try {
             toast.loading("Verifying Secure Payment...", { id: "verifying" });
             
-            const verifyRes = await fetch('https://homefeast-fullstack.onrender.com/api/orders', {
+            // 🟢 FIX: URL updated to /api/payment/verify aur userId add kar di gayi hai
+            const verifyRes = await fetch('https://homefeast-fullstack.onrender.com/api/payment/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify({
-                items: cartItems,
-                totalAmount: grandTotal,
-                razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                paymentMethod: "Razorpay Secure",
-                status: "New"
+                userId: currentUser?._id, // 👈 Required by your backend controller
+                items: cartItems,
+                totalAmount: grandTotal
               })
             });
 
             if (verifyRes.ok) {
               const finalOrder = await verifyRes.json();
-              const dbOrderId = finalOrder._id || finalOrder.order?._id || "ORD12345";
+              const dbOrderId = finalOrder.order?._id || finalOrder._id || "ORD12345";
               
               toast.success("Payment Verified & Order Placed! 🎉", { id: "verifying" });
               
