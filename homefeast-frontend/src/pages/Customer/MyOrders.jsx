@@ -1,20 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext'; // 🟢 Real User ke liye Auth Context import kiya
+import { useAuth } from '../../context/AuthContext'; 
 
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(null); 
 
-  // 🟢 Real User ID Auth Context se nikal rahe hain (chahe direct id ho ya user object ke andar)
+  // Real User ID Auth Context se nikal rahe hain
   const { user } = useAuth();
   const userId = user?._id || user?.id || user?.user?._id || user?.user?.id;
 
   useEffect(() => {
     const fetchOrders = async () => {
-      // Agar user login nahi hai toh aage mat badho
       if (!userId) {
         setLoading(false);
         return;
@@ -35,7 +34,7 @@ const MyOrders = () => {
     fetchOrders();
   }, [userId]);
 
-  // 🛑 CANCEL ORDER & REFUND FUNCTION
+  // CANCEL ORDER & REFUND FUNCTION
   const handleCancelOrder = async (orderId) => {
     if (!window.confirm("Are you sure you want to cancel this order? The amount will be refunded to your bank account.")) return;
     
