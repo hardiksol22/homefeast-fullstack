@@ -23,7 +23,7 @@ const createOrder = async (req, res) => {
     
   } catch (error) {
     console.error("Razorpay Create Order Error:", error);
-    res.status(500).json({ message: "Server error while creating payment order" });
+    res.status(500).json({ message: "Server error while creating payment order: " + error.message });
   }
 };
 
@@ -39,6 +39,9 @@ const verifyPayment = async (req, res) => {
       totalAmount 
     } = req.body;
     
+    // 🛡️ Debugging logs to verify keys and IDs on Render
+    console.log("Verifying payment for Order ID:", razorpay_order_id);
+
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSign = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -63,12 +66,13 @@ const verifyPayment = async (req, res) => {
         order: newOrder 
       });
     } else {
-      return res.status(400).json({ message: "Invalid signature! Security breach detected." });
+      console.error("Signature Mismatch! Expected:", expectedSign, "Got:", razorpay_signature);
+      return res.status(400).json({ message: "Invalid signature! Payment verification failed." });
     }
 
   } catch (error) {
     console.error("Razorpay Verify Error:", error);
-    res.status(500).json({ message: "Internal Server Error during verification" });
+    res.status(500).json({ message: "Internal Server Error during verification: " + error.message });
   }
 };
 
@@ -84,31 +88,26 @@ const getUserOrders = async (req, res) => {
   }
 };
 
-// 🛑 4. CANCEL ORDER & INITIATE REFUND (NAYA FUNCTION)
+// 🛑 4. CANCEL ORDER & INITIATE REFUND
 const cancelAndRefundOrder = async (req, res) => {
   try {
     const { orderId } = req.body;
     
-    // 1. Order find karo
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // 2. Check karo ki order cancel hone layak hai ya nahi
     if (order.orderStatus !== 'Placed') {
       return res.status(400).json({ message: "Order cannot be cancelled at this stage." });
     }
 
-    // 3. Razorpay Setup
     const instance = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID,
       key_secret: process.env.RAZORPAY_KEY_SECRET,
     });
 
-    // 4. Initiate Refund via Razorpay API
     const refund = await instance.payments.refund(order.razorpayPaymentId);
 
-    if (refund.status === 'processed') {
-      // 5. Update Database status
+    if (refund.status === 'processed' || refund.status === 'pending') {
       order.orderStatus = 'Cancelled';
       order.paymentStatus = 'Refunded';
       await order.save();
@@ -123,14 +122,13 @@ const cancelAndRefundOrder = async (req, res) => {
 
   } catch (error) {
     console.error("Refund Error:", error);
-    res.status(500).json({ message: "Server error while processing refund." });
+    res.status(500).json({ message: "Server error while processing refund: " + error.message });
   }
 };
 
-// YAHAN SE EXPORT HOTA HAI
 module.exports = { 
   createOrder, 
   verifyPayment,
   getUserOrders,
-  cancelAndRefundOrder // 👈 Naya function yahan export me add kiya gaya hai
+  cancelAndRefundOrder 
 };
