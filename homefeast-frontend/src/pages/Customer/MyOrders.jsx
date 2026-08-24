@@ -5,11 +5,9 @@ import toast from 'react-hot-toast';
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // 🟢 NAYA: Cancelling state add kiya hai UI loading ke liye
   const [cancelling, setCancelling] = useState(null); 
 
-  // ⚠️ Abhi ke liye wahi same dummy User ID le rahe hain jo Cart me dali thi
+  // ⚠️ Temporary dummy User ID jo aapne cart/orders me use ki thi
   const userId = "64f1b2c3d4e5f6a7b8c9d0e1"; 
 
   useEffect(() => {
@@ -29,7 +27,7 @@ const MyOrders = () => {
     fetchOrders();
   }, [userId]);
 
-  // 🛑 NAYA: CANCEL ORDER & REFUND FUNCTION
+  // 🛑 CANCEL ORDER & REFUND FUNCTION
   const handleCancelOrder = async (orderId) => {
     if (!window.confirm("Are you sure you want to cancel this order? The amount will be refunded to your bank account.")) return;
     
@@ -90,8 +88,8 @@ const MyOrders = () => {
             {orders.map((order) => (
               <div key={order._id} className="bg-[#111827] border border-[#263241] p-6 rounded-3xl shadow-lg transition-all hover:border-[#10B981]/50 relative">
                 
-                {/* 🛑 NAYA: CANCEL BUTTON (Sirf 'Placed' order pe dikhega) */}
-                {order.orderStatus === 'Placed' && (
+                {/* 🛑 CANCEL BUTTON (Ab yeh har active order par dikhega jab tak wo already Cancelled ya Delivered na ho) */}
+                {order.orderStatus !== 'Cancelled' && order.orderStatus !== 'Delivered' && (
                   <button 
                     onClick={() => handleCancelOrder(order._id)}
                     disabled={cancelling === order._id}
