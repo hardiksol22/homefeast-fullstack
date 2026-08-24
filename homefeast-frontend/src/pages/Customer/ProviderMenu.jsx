@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom'; 
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext'; 
-import { useCart } from '../../context/CartContext'; // 🟢 NAYA: CartContext import kiya
+import { useCart } from '../../context/CartContext'; 
 
 const ProviderMenu = () => {
   const { id } = useParams(); 
   const navigate = useNavigate(); 
   const { user } = useAuth(); 
   
-  // 🟢 NAYA: Dummy state hata kar asali CartContext use kiya
   const { addToCart, cartCount } = useCart();
 
   const [menu, setMenu] = useState([]);
@@ -37,10 +36,7 @@ const ProviderMenu = () => {
     fetchMenu();
   }, [id]);
 
-  // 🟢 NAYA FIX: Ab dishName ki jagah poora 'dish' object pass hoga
   const handleAddToCart = (dish) => {
-    
-    // 1. Agar user login nahi hai, toh usey roko aur Login page par bhejo
     if (!user) {
       toast.error("Please Sign In to order delicious food! 🍔", {
         style: { background: '#F43F5E', color: '#F8FAFC', fontWeight: 'bold' }
@@ -48,8 +44,7 @@ const ProviderMenu = () => {
       navigate('/login');
       return; 
     }
-
-    // 2. Agar login hai, toh seedha Context me add karo (Kitchen Name ke sath)
+    // Seedha Context me add karo (Kitchen Name ke sath)
     addToCart(dish, "Chef's Kitchen"); 
   };
 
@@ -86,7 +81,6 @@ const ProviderMenu = () => {
             ←
           </Link>
           
-          {/* 🟢 NAYA FIX: Cart Icon ko Clickable bana diya */}
           <Link to="/cart" className="relative group block">
             <div className="w-10 h-10 rounded-full bg-[#080D12]/80 backdrop-blur-md border border-[#263241] flex items-center justify-center text-[#F8FAFC] group-hover:text-[#10B981] group-hover:border-[#10B981] transition-all shadow-lg cursor-pointer">
               🛒
@@ -145,7 +139,6 @@ const ProviderMenu = () => {
                 {/* Left Side: Dish Info */}
                 <div className="flex-1 flex flex-col justify-center">
                   
-                  {/* Veg/Non-Veg Icon */}
                   <div className="flex items-center gap-2 mb-2">
                     <div className={`w-4 h-4 border-2 flex items-center justify-center rounded-sm ${dish.type === 'Veg' ? 'border-[#10B981]' : dish.type === 'Non-Veg' ? 'border-rose-500' : 'border-yellow-500'}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${dish.type === 'Veg' ? 'bg-[#10B981]' : dish.type === 'Non-Veg' ? 'bg-rose-500' : 'bg-yellow-500'}`}></span>
@@ -164,7 +157,7 @@ const ProviderMenu = () => {
                   </p>
 
                   <button 
-                    onClick={() => handleAddToCart(dish)} // 🟢 FIX: Poora dish object pass kiya
+                    onClick={() => handleAddToCart(dish)} 
                     className="w-max hidden sm:flex items-center gap-2 px-6 py-2.5 bg-[#080D12] text-[#10B981] font-black rounded-xl border border-[#263241] hover:border-[#10B981] hover:bg-[#10B981]/10 transition-colors"
                   >
                     ADD TO CART <span className="text-lg">+</span>
@@ -178,10 +171,9 @@ const ProviderMenu = () => {
                     alt={dish.name} 
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
                   />
-                  {/* Floating ADD Button for Mobile */}
                   <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 sm:hidden pb-8">
                     <button 
-                      onClick={() => handleAddToCart(dish)} // 🟢 FIX: Poora dish object pass kiya
+                      onClick={() => handleAddToCart(dish)} 
                       className="px-8 py-2 bg-[#F8FAFC] text-[#080D12] text-sm font-black rounded-xl border border-[#E2E8F0] shadow-xl hover:bg-[#10B981] hover:text-[#080D12] hover:border-[#10B981] transition-colors"
                     >
                       ADD
