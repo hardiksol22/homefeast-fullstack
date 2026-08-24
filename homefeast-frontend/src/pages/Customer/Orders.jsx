@@ -21,7 +21,6 @@ const Orders = () => {
 
     const fetchMyOrders = async () => {
       try {
-        // ⚠️ DHYAN DEIN: Yahan apne backend ka actual 'Get User Orders' wala URL daalein
         const response = await fetch(`https://homefeast-fullstack.onrender.com/api/orders/customer`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -33,21 +32,13 @@ const Orders = () => {
           // Naye orders upar dikhane ke liye reverse kar rahe hain
           setOrders(data.reverse());
         } else {
-          // Fallback UI data just in case API is not ready
-          setOrders([
-            {
-              _id: "ORD-98213",
-              createdAt: new Date().toISOString(),
-              status: "Preparing", // New, Pending, Preparing, Ready, Delivered
-              totalAmount: 450,
-              provider: { kitchenName: "Sharma Ji Ka Dhaba" },
-              items: [{ name: "Paneer Butter Masala", quantity: 2 }, { name: "Tandoori Roti", quantity: 4 }]
-            }
-          ]);
+          // 🛑 Dummy fallback data poori tarah hata diya gaya hai
+          setOrders([]);
         }
       } catch (error) {
         console.error("Fetch Orders Error:", error);
         toast.error("Failed to load orders");
+        setOrders([]);
       } finally {
         setLoading(false);
       }
@@ -59,7 +50,7 @@ const Orders = () => {
     return () => clearInterval(interval);
   }, [user, token, navigate]);
 
-  // Order sorting: Active (New, Pending, Preparing, Ready) vs Past (Delivered, Cancelled)
+  // Order sorting: Active vs Past
   const activeOrders = orders.filter(o => !['Delivered', 'Cancelled'].includes(o.status));
   const pastOrders = orders.filter(o => ['Delivered', 'Cancelled'].includes(o.status));
 
@@ -122,7 +113,6 @@ const Orders = () => {
                     
                     return (
                       <div key={order._id} className="bg-[#111827]/90 backdrop-blur-md border border-[#263241] rounded-[24px] p-6 sm:p-8 shadow-xl relative overflow-hidden group hover:border-[#F4B942]/50 transition-all">
-                        {/* Shimmer Effect */}
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#F4B942]/50 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
                         
                         <div className="flex flex-col md:flex-row justify-between gap-6 mb-8">
