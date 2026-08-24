@@ -75,6 +75,14 @@ const Navbar = () => {
                   <span className={`absolute -bottom-2 left-1/2 -translate-x-1/2 h-[4px] w-[4px] rounded-full bg-[#10B981] transition-all duration-300 ${isActive(link.path) ? 'opacity-100 shadow-[0_0_8px_rgba(16,185,129,1)]' : 'opacity-0 group-hover:opacity-100'}`}></span>
                 </Link>
               ))}
+
+              {/* 🟢 DESKTOP MY ORDERS LINK (Added here so it stays right next to Explore/Chefs) */}
+              {user && !isCook && !isAdmin && (
+                <Link to="/orders" className={`relative group text-[15px] font-bold transition-all duration-300 ${isActive('/orders') ? 'text-[#10B981]' : 'text-[#CBD5E1] hover:text-[#10B981]'}`}>
+                  My Orders
+                  <span className={`absolute -bottom-2 left-1/2 -translate-x-1/2 h-[4px] w-[4px] rounded-full bg-[#10B981] transition-all duration-300 ${isActive('/orders') ? 'opacity-100 shadow-[0_0_8px_rgba(16,185,129,1)]' : 'opacity-0 group-hover:opacity-100'}`}></span>
+                </Link>
+              )}
             </nav>
 
             <div className="hidden lg:block h-6 w-[1px] bg-[#263241]"></div>
@@ -82,7 +90,6 @@ const Navbar = () => {
             {/* 🛒 WISHLIST, CART & AUTH (Desktop) */}
             <div className="hidden lg:flex items-center gap-4">
               
-              {/* 🟢 FIX: Ab Wishlist aur Cart dono tabhi dikhenge jab User Logged In ho */}
               {user && !isCook && !isAdmin && (
                 <>
                   <Link to="/wishlist" className="relative p-2 rounded-xl bg-[#111827] border border-[#263241] hover:border-[#10B981]/50 hover:text-rose-500 transition-all text-[#F8FAFC]" title="My Wishlist">
@@ -125,7 +132,6 @@ const Navbar = () => {
             {/* 🍔 MOBILE MENU BUTTON */}
             <div className="lg:hidden flex items-center gap-4">
               
-              {/* 🟢 FIX: Mobile Menu mein bhi Cart tabhi dikhega jab user Logged In ho */}
               {user && !isCook && !isAdmin && (
                 <Link to="/cart" className="relative text-[#F4B942]">
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
