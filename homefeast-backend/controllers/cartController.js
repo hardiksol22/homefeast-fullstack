@@ -1,15 +1,21 @@
 const Cart = require('../models/Cart');
 
+// 🛡️ HELPER FUNCTION: To safely extract user ID whether it's 'id' or '_id'
+const getUserId = (req) => {
+  return req.user._id || req.user.id;
+};
+
 // 1. Get User's Cart
 const getCart = async (req, res) => {
   try {
-    let cart = await Cart.findOne({ user: req.user._id }).populate({
+    const userId = getUserId(req);
+    let cart = await Cart.findOne({ user: userId }).populate({
       path: 'items.dish',
       select: 'name price image type cook' // Dish ki details
     });
 
     if (!cart) {
-      cart = await Cart.create({ user: req.user._id, items: [] });
+      cart = await Cart.create({ user: userId, items: [] });
     }
     res.status(200).json(cart);
   } catch (error) {
@@ -20,11 +26,13 @@ const getCart = async (req, res) => {
 // 2. Add Item to Cart (Ya quantity badhayein agar pehle se hai)
 const addToCart = async (req, res) => {
   try {
+    const userId = getUserId(req);
     const { dishId } = req.body;
-    let cart = await Cart.findOne({ user: req.user._id });
+    
+    let cart = await Cart.findOne({ user: userId });
 
     if (!cart) {
-      cart = new Cart({ user: req.user._id, items: [] });
+      cart = new Cart({ user: userId, items: [] }); // Error yahan aata tha, ab fix ho gaya!
     }
 
     const itemIndex = cart.items.findIndex(item => item.dish.toString() === dishId);
@@ -46,10 +54,20 @@ const addToCart = async (req, res) => {
 // 3. Update Item Quantity (+ / -)
 const updateCartItemQuantity = async (req, res) => {
   try {
-    const { dishId, quantity } = req.body;
-    let cart = await Cart.findOne({ user: req.user._id });
+    const userId = getUserId(req);
+    
+    // 🟢 FIX: Frontend se kabhi itemId aata hai aur kabhi dishId, hum dono handle kar lenge
+    const targetId = req.body.dishId || req.body.itemId; 
+    const { quantity } = req.body;
+    
+    let cart = await Cart.findOne({ user: userId });
+    if(!cart) return res.status(404).json({ message: "Cart not found" });
 
-    const itemIndex = cart.items.findIndex(item => item.dish.toString() === dishId);
+    // Match by dishId OR the subdocument _id
+    const itemIndex = cart.items.findIndex(
+      item => item.dish.toString() === targetId || item._id.toString() === targetId
+    );
+    
     if (itemIndex > -1) {
       cart.items[itemIndex].quantity = quantity;
       await cart.save();
@@ -65,11 +83,18 @@ const updateCartItemQuantity = async (req, res) => {
 // 4. Remove Item from Cart
 const removeFromCart = async (req, res) => {
   try {
-    const { dishId } = req.params;
-    let cart = await Cart.findOne({ user: req.user._id });
+    const userId = getUserId(req);
+    
+    // 🟢 FIX: Param se aane wali koi bhi ID nikal lega automatically
+    const targetId = req.params.dishId || req.params.itemId || Object.values(req.params)[0];
+
+    let cart = await Cart.findOne({ user: userId });
 
     if (cart) {
-      cart.items = cart.items.filter(item => item.dish.toString() !== dishId);
+      // Remove matching dish ID OR matching subdocument ID
+      cart.items = cart.items.filter(
+        item => item.dish.toString() !== targetId && item._id.toString() !== targetId
+      );
       await cart.save();
     }
 
