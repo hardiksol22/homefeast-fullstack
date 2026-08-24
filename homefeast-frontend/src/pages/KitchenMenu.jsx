@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { useAuth } from '../context/AuthContext'; // Path check kar lena bhai
+import { useAuth } from '../context/AuthContext'; 
 
 const KitchenMenu = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation(); 
   const { user } = useAuth();
   
   const token = user?.token || user?.user?.token;
   const userRole = user?.role || user?.user?.role;
 
-  // 🛡️ SECURITY LAYER: Chefs ko dusre kitchen ka menu access karne se rokna
+  // 🧠 SMART URL CHECK: Agar URL mein '?source=chefs' hai tabhi team dikhao
+  const searchParams = new URLSearchParams(location.search);
+  const source = searchParams.get('source');
+  const showTeamSection = source === 'chefs'; 
+
+  // 🛡️ SECURITY LAYER
   useEffect(() => {
     if (userRole === 'cook') {
       toast.error("Chefs cannot order from other kitchens! 👨‍🍳", { id: 'menu-security' });
@@ -101,12 +107,17 @@ const KitchenMenu = () => {
     );
   }
 
-  // 👥 KITCHEN TEAM LOGIC (Real array if exists, else fallback data)
-  const kitchenTeam = kitchen.team || [
-    { name: kitchen.user?.name || kitchen.kitchenName || 'Master Chef', role: 'Head Culinary Specialist', experience: '8+ Years' },
-    { name: 'Chef Aman', role: 'Traditional Tiffin Expert', experience: '5+ Years' },
-    { name: 'Chef Ritu', role: 'Spice & Gravy Master', experience: '6+ Years' }
-  ];
+  // 👥 KITCHEN TEAM LOGIC (100% Real Database Connect)
+  // Agar backend me array hai toh wo dikhayenge, warna sirf registered lead chef ka single card banayenge
+  const kitchenTeam = kitchen.team && kitchen.team.length > 0 
+    ? kitchen.team 
+    : [
+        { 
+          name: kitchen.user?.name || kitchen.kitchenName || 'Home Chef', 
+          role: 'Head Culinary Specialist', 
+          experience: 'Verified' 
+        }
+      ];
 
   // 🔥 POPULAR DISHES LOGIC: Shuru ki 3 dishes ko 'Popular' me dikhayenge, baaki neeche!
   const popularDishes = dishes.slice(0, 3);
@@ -142,54 +153,61 @@ const KitchenMenu = () => {
             </div>
             
             <div className="bg-[#111827]/80 backdrop-blur-xl border border-[#263241] p-4 md:p-6 rounded-2xl flex items-center gap-6 shadow-2xl">
-              <div className="text-center">
+              <div className="text-center px-4">
                 <p className="text-[10px] text-[#64748B] font-black uppercase tracking-wider mb-1">Kitchen Rating</p>
                 <p className="text-2xl font-black text-[#F4B942]">⭐ {kitchen.rating || '4.8'}</p>
               </div>
-              <div className="w-px h-10 bg-[#263241]"></div>
-              <div className="text-center">
-                <p className="text-[10px] text-[#64748B] font-black uppercase tracking-wider mb-1">Chef Team</p>
-                <p className="text-2xl font-black text-[#10B981]">{kitchenTeam.length} Active</p>
-              </div>
+              
+              {showTeamSection && (
+                <>
+                  <div className="w-px h-10 bg-[#263241]"></div>
+                  <div className="text-center px-4">
+                    <p className="text-[10px] text-[#64748B] font-black uppercase tracking-wider mb-1">Chef Team</p>
+                    <p className="text-2xl font-black text-[#10B981]">{kitchenTeam.length} Active</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* ================= 2. 👥 MEET THE KITCHEN TEAM ================= */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 mt-12 relative z-10">
-        <div className="bg-[#111827] border border-[#263241] rounded-[32px] p-6 md:p-8 shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[#F4B942]/5 rounded-full blur-[80px]"></div>
-          
-          <div className="mb-8 flex items-center justify-between relative z-10">
-            <div>
-              <h2 className="text-2xl font-black text-[#F8FAFC] flex items-center gap-3">
-                <span className="bg-[#F4B942]/20 text-[#F4B942] p-2 rounded-xl border border-[#F4B942]/30">👨‍🍳</span> 
-                Meet The Kitchen Team
-              </h2>
-              <p className="text-sm text-[#94A3B8] font-medium mt-2">The culinary artists preparing your meals today.</p>
+      {showTeamSection && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 mt-12 relative z-10 animate-fade-in-up">
+          <div className="bg-[#111827] border border-[#263241] rounded-[32px] p-6 md:p-8 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#F4B942]/5 rounded-full blur-[80px]"></div>
+            
+            <div className="mb-8 flex items-center justify-between relative z-10">
+              <div>
+                <h2 className="text-2xl font-black text-[#F8FAFC] flex items-center gap-3">
+                  <span className="bg-[#F4B942]/20 text-[#F4B942] p-2 rounded-xl border border-[#F4B942]/30">👨‍🍳</span> 
+                  Meet The Kitchen Team
+                </h2>
+                <p className="text-sm text-[#94A3B8] font-medium mt-2">The culinary artists preparing your meals today.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+              {kitchenTeam.map((chef, idx) => (
+                <div key={idx} className="bg-[#080D12] border border-[#263241] p-5 rounded-2xl flex items-center gap-5 hover:border-[#10B981]/40 transition-colors shadow-inner group">
+                  <div className="relative">
+                    <img src={getAvatar(chef.name)} alt={chef.name} className="w-16 h-16 rounded-full border-2 border-[#263241] group-hover:border-[#10B981] object-cover transition-colors" />
+                    {idx === 0 && <span className="absolute -bottom-2 -right-2 text-lg">👑</span>}
+                  </div>
+                  <div>
+                    <h4 className="font-black text-[#F8FAFC] text-base group-hover:text-[#10B981] transition-colors line-clamp-1">{chef.name}</h4>
+                    <p className="text-xs font-bold text-[#F4B942] mt-0.5">{chef.role}</p>
+                    <p className="text-[11px] font-semibold text-[#64748B] mt-1 uppercase tracking-widest">{chef.experience}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
-            {kitchenTeam.map((chef, idx) => (
-              <div key={idx} className="bg-[#080D12] border border-[#263241] p-5 rounded-2xl flex items-center gap-5 hover:border-[#10B981]/40 transition-colors shadow-inner group">
-                <div className="relative">
-                  <img src={getAvatar(chef.name)} alt={chef.name} className="w-16 h-16 rounded-full border-2 border-[#263241] group-hover:border-[#10B981] object-cover transition-colors" />
-                  {idx === 0 && <span className="absolute -bottom-2 -right-2 text-lg">👑</span>}
-                </div>
-                <div>
-                  <h4 className="font-black text-[#F8FAFC] text-base group-hover:text-[#10B981] transition-colors">{chef.name}</h4>
-                  <p className="text-xs font-bold text-[#F4B942] mt-0.5">{chef.role}</p>
-                  <p className="text-[11px] font-semibold text-[#64748B] mt-1 uppercase tracking-widest">{chef.experience}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
-      </div>
+      )}
 
-      {/* ================= 3. 🔥 POPULAR DISHES (VIP SECTION) ================= */}
+      {/* ================= 3. 🔥 POPULAR DISHES ================= */}
       {popularDishes.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 mt-16">
           <h2 className="text-2xl font-black mb-6 flex items-center gap-3">

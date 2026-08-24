@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // 🟢 useNavigate add kiya
-import toast from 'react-hot-toast'; // 🟢 toast add kiya
-import { useAuth } from '../../context/AuthContext'; // 🟢 useAuth add kiya (path check kar lena)
+import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext'; 
 
 const Chefs = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // 🟢 SECURITY LAYER: Agar Cook hai, toh usko Cook Dashboard bhej do!
+  // 🛡️ SECURITY LAYER: Agar Cook hai, toh usko Cook Dashboard bhej do!
   const userRole = user?.role || user?.user?.role;
   useEffect(() => {
     if (userRole === 'cook') {
@@ -120,7 +120,8 @@ const Chefs = () => {
                   <h4 className="text-lg font-black text-[#F8FAFC]">{matchedChef.user?.name || 'Chef'}</h4>
                   <p className="text-sm text-[#94A3B8] font-semibold">{matchedChef.kitchenName} • {matchedChef.cuisine}</p>
                 </div>
-                <Link to={`/provider/${matchedChef._id}`} className="w-10 h-10 bg-[#10B981]/10 rounded-full flex items-center justify-center text-[#10B981] group-hover:bg-[#10B981] group-hover:text-[#080D12] transition-colors">
+                {/* 🟢 FIX: Yahan ?source=chefs add kiya */}
+                <Link to={`/provider/${matchedChef._id}?source=chefs`} className="w-10 h-10 bg-[#10B981]/10 rounded-full flex items-center justify-center text-[#10B981] group-hover:bg-[#10B981] group-hover:text-[#080D12] transition-colors">
                   →
                 </Link>
               </div>
@@ -183,8 +184,9 @@ const Chefs = () => {
                   </div>
 
                   {/* Action Button */}
+                  {/* 🟢 FIX: Yahan ?source=chefs add kiya */}
                   <Link 
-                    to={`/provider/${chef._id}`}
+                    to={`/provider/${chef._id}?source=chefs`}
                     className="w-full mt-auto py-3.5 bg-[#080D12] text-[#F8FAFC] text-sm font-black rounded-xl border border-[#263241] group-hover:bg-[#F4B942] group-hover:text-[#080D12] group-hover:border-[#F4B942] transition-all duration-300 shadow-sm flex justify-center items-center gap-2"
                   >
                     View Chef's Menu

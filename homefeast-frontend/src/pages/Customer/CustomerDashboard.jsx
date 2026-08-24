@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // 🟢 useNavigate add kiya
-import { useAuth } from '../context/AuthContext'; // 🟢 useAuth import kiya (Path check kar lena agar alag folder mein ho)
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const CustomerDashboard = () => {
-  const navigate = useNavigate(); // 🟢 Navigation ke liye
-  const { user } = useAuth(); // 🟢 Logged-in user ka data
+  const navigate = useNavigate();
+  const { user } = useAuth();
   
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +17,7 @@ const CustomerDashboard = () => {
   const [moodSuggestion, setMoodSuggestion] = useState("");
   const [smartFilter, setSmartFilter] = useState("All");
 
-  // 🟢 NAYA SECURITY LOGIC: Agar Cook hai, toh usko Cook Dashboard bhej do!
+  // 🛡️ Security Check: Agar Cook hai toh usko Cook Dashboard bhej do!
   useEffect(() => {
     const userRole = user?.role || user?.user?.role;
     if (userRole === 'cook') {
@@ -32,7 +32,7 @@ const CustomerDashboard = () => {
     return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80";
   };
 
-  const getAvatar = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Chef')}&background=10B981&color=080D12&size=150&bold=true`;
+  const getAvatar = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Kitchen')}&background=10B981&color=080D12&size=150&bold=true`;
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -117,7 +117,7 @@ const CustomerDashboard = () => {
               <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-[#64748B] group-focus-within:text-[#10B981]">🔍</div>
               <input 
                 type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
-                placeholder="Search kitchens or chefs..." 
+                placeholder="Search kitchens..." 
                 className="w-full pl-14 pr-6 py-4 bg-[#080D12] border border-[#263241] rounded-2xl text-[#F8FAFC] focus:outline-none focus:border-[#10B981] font-semibold transition-all shadow-inner" 
               />
             </div>
@@ -170,15 +170,14 @@ const CustomerDashboard = () => {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {aiPicks.map(provider => (
-                    <Link key={`ai-${provider._id}`} to={`/provider/${provider._id}`} className="block group">
+                    <Link key={`ai-${provider._id}`} to={`/provider/${provider._id}?source=explore`} className="block group">
                       <div className="bg-[#111827] border border-[#263241] rounded-[24px] p-4 flex gap-4 hover:border-[#10B981]/50 hover:bg-[#1E293B]/50 transition-all shadow-lg items-center">
                         <div className="relative">
-                          <img src={getAvatar(provider.user?.name || provider.kitchenName)} className="w-16 h-16 rounded-full border-2 border-[#10B981] object-cover" alt="Chef Avatar" />
-                          <div className="absolute -bottom-1 -right-1 bg-[#080D12] text-[10px] w-6 h-6 flex items-center justify-center rounded-full border border-[#263241]">👨‍🍳</div>
+                          <img src={getAvatar(provider.kitchenName)} className="w-16 h-16 rounded-full border-2 border-[#10B981] object-cover" alt="Kitchen Avatar" />
+                          <div className="absolute -bottom-1 -right-1 bg-[#080D12] text-[10px] w-6 h-6 flex items-center justify-center rounded-full border border-[#263241]">🍽️</div>
                         </div>
                         <div className="flex-1 py-1">
                           <h4 className="font-black text-[#F8FAFC] text-lg leading-tight group-hover:text-[#10B981]">{provider.kitchenName}</h4>
-                          <p className="text-xs text-[#94A3B8] font-bold mt-1">Lead Chef: {provider.user?.name}</p>
                         </div>
                       </div>
                     </Link>
@@ -189,14 +188,12 @@ const CustomerDashboard = () => {
 
             {/* EXPLORE KITCHENS GRID */}
             <h2 className="text-2xl font-black mb-6 border-b border-[#263241] pb-4 flex items-center justify-between">
-              <span>👨‍🍳 Explore Kitchens & Chef Teams</span>
+              <span>👨‍🍳 Explore Kitchens</span>
             </h2>
             
             {filteredProviders.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mt-10">
                 {filteredProviders.map((provider) => {
-                  const chefTeamCount = provider.chefsCount || 2; 
-
                   return (
                     <div key={provider._id} className="bg-[#111827] border border-[#263241] rounded-[32px] overflow-visible group flex flex-col hover:border-[#10B981]/40 hover:shadow-[0_20px_40px_rgba(16,185,129,0.15)] transition-all duration-500 transform hover:-translate-y-2 h-full mt-6">
                       
@@ -204,43 +201,34 @@ const CustomerDashboard = () => {
                       <div className="relative h-48 w-full overflow-hidden rounded-t-[32px]">
                         <img src={getKitchenImage(provider)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" alt="Kitchen Cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-[#080D12] via-transparent to-transparent"></div>
-                        <div className="absolute top-4 right-4 bg-[#080D12]/80 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-lg font-black text-sm text-[#F8FAFC]">⭐ {provider.rating || '4.8'}</div>
                       </div>
 
                       <div className="p-6 flex flex-col flex-1 bg-[#080D12] rounded-b-[32px] relative pt-12">
                         
-                        {/* Chef Avatar Overlapping */}
+                        {/* Kitchen Avatar Overlapping */}
                         <div className="absolute -top-10 left-6 z-20">
                           <div className="relative group-hover:-translate-y-2 transition-transform duration-300">
                              <img 
-                               src={getAvatar(provider.user?.name || provider.kitchenName)} 
+                               src={getAvatar(provider.kitchenName)} 
                                className="w-20 h-20 rounded-full border-4 border-[#080D12] shadow-xl object-cover" 
-                               alt="Chef Avatar" 
+                               alt="Kitchen Avatar" 
                              />
                              <div className="absolute bottom-0 right-0 bg-[#10B981] w-5 h-5 rounded-full border-2 border-[#080D12] shadow-sm"></div>
                           </div>
                         </div>
 
-                        <div className="flex justify-between items-start mb-1">
-                          <div>
-                            <h3 className="text-xl font-black text-[#F8FAFC] line-clamp-1 group-hover:text-[#10B981] transition-colors">{provider.kitchenName}</h3>
-                            <p className="text-[#10B981] text-sm font-black mt-1">Lead Chef: {provider.user?.name || 'Partner'}</p>
-                          </div>
+                        {/* Kitchen Name Only */}
+                        <div className="flex flex-col mb-6 mt-2">
+                          <h3 className="text-xl font-black text-[#F8FAFC] line-clamp-1 group-hover:text-[#10B981] transition-colors">{provider.kitchenName}</h3>
                         </div>
                         
-                        {/* Chef Team Count Badge */}
-                        <div className="my-2.5 inline-flex items-center gap-2 bg-[#1E293B] border border-[#263241] px-3 py-1 rounded-xl w-fit">
-                          <span className="text-xs">👥</span>
-                          <span className="text-xs font-bold text-[#94A3B8]">Chef Team: <strong className="text-[#F8FAFC]">{chefTeamCount} Active Chefs</strong></span>
-                        </div>
-                        
-                        <p className="text-[#64748B] text-xs font-bold mb-4">{provider.cuisine} • Freshly Prepared</p>
-                        
+                        {/* Clean View Menu Button */}
                         <div className="mt-auto pt-4 border-t border-[#263241]">
-                          <Link to={`/provider/${provider._id}`} className="w-full block text-center py-3.5 bg-[#111827] text-[#F8FAFC] text-sm font-black rounded-xl border border-[#263241] group-hover:bg-[#10B981] group-hover:text-[#080D12] transition-all shadow-md">
-                            Visit Kitchen & Chefs →
+                          <Link to={`/provider/${provider._id}?source=explore`} className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#111827] text-[#F8FAFC] text-sm font-black rounded-xl border border-[#263241] group-hover:bg-[#10B981] group-hover:text-[#080D12] transition-all shadow-md">
+                            View Kitchen Menu <span>→</span>
                           </Link>
                         </div>
+
                       </div>
                     </div>
                   );
