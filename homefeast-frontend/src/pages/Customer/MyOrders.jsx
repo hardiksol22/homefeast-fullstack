@@ -1,17 +1,25 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext'; // 🟢 Real User ke liye Auth Context import kiya
 
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(null); 
 
-  // ⚠️ Temporary dummy User ID jo aapne cart/orders me use ki thi
-  const userId = "64f1b2c3d4e5f6a7b8c9d0e1"; 
+  // 🟢 Real User ID Auth Context se nikal rahe hain (chahe direct id ho ya user object ke andar)
+  const { user } = useAuth();
+  const userId = user?._id || user?.id || user?.user?._id || user?.user?.id;
 
   useEffect(() => {
     const fetchOrders = async () => {
+      // Agar user login nahi hai toh aage mat badho
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch(`https://homefeast-fullstack.onrender.com/api/payment/orders/${userId}`);
         if (!res.ok) throw new Error("Failed to fetch orders");
@@ -45,7 +53,6 @@ const MyOrders = () => {
 
       if (res.ok) {
         toast.success(data.message, { id: toastId });
-        // UI ko turant update karenge 'Cancelled' aur 'Refunded' show karne ke liye
         setOrders(prev => prev.map(order => 
           order._id === orderId ? { ...order, orderStatus: 'Cancelled', paymentStatus: 'Refunded' } : order
         ));
@@ -61,7 +68,6 @@ const MyOrders = () => {
 
   return (
     <div className="min-h-screen bg-[#080D12] text-[#F8FAFC] pt-32 pb-20 relative overflow-hidden">
-      {/* 🌟 Ambient Background Glow */}
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#10B981]/5 rounded-full blur-[150px] pointer-events-none"></div>
 
       <div className="max-w-[1000px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -70,15 +76,23 @@ const MyOrders = () => {
           My Orders
         </h1>
 
-        {loading ? (
+        {!user ? (
+          <div className="text-center py-20 bg-[#111827] border border-[#263241] rounded-3xl shadow-xl">
+            <h3 className="text-2xl font-black text-[#F8FAFC] mb-3">Please Sign In</h3>
+            <p className="text-[#94A3B8] mb-6">You need to be logged in to view your real orders.</p>
+            <Link to="/login" className="px-8 py-4 bg-[#10B981] text-[#080D12] font-black rounded-xl hover:bg-[#059669] transition-all">
+              Sign In
+            </Link>
+          </div>
+        ) : loading ? (
           <div className="text-center py-20 text-[#94A3B8] font-bold animate-pulse">
             Loading your delicious history... 🍕
           </div>
         ) : orders.length === 0 ? (
           <div className="text-center py-20 bg-[#111827] border border-[#263241] rounded-3xl shadow-xl">
             <span className="text-6xl mb-6 opacity-80 block">🍽️</span>
-            <h3 className="text-2xl font-black text-[#F8FAFC] mb-3">No orders yet!</h3>
-            <p className="text-[#94A3B8] mb-6">Looks like you haven't tasted our magic yet.</p>
+            <h3 className="text-2xl font-black text-[#F8FAFC] mb-3">No orders found!</h3>
+            <p className="text-[#94A3B8] mb-6">You haven't placed any real orders yet.</p>
             <Link to="/explore" className="px-8 py-4 bg-[#10B981] text-[#080D12] font-black rounded-xl hover:bg-[#059669] transition-all">
               Explore Kitchens
             </Link>
@@ -88,7 +102,6 @@ const MyOrders = () => {
             {orders.map((order) => (
               <div key={order._id} className="bg-[#111827] border border-[#263241] p-6 rounded-3xl shadow-lg transition-all hover:border-[#10B981]/50 relative">
                 
-                {/* 🛑 CANCEL BUTTON (Ab yeh har active order par dikhega jab tak wo already Cancelled ya Delivered na ho) */}
                 {order.orderStatus !== 'Cancelled' && order.orderStatus !== 'Delivered' && (
                   <button 
                     onClick={() => handleCancelOrder(order._id)}
@@ -124,7 +137,7 @@ const MyOrders = () => {
 
                 <div className="space-y-3">
                   {order.items.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center opacity-90">
+                    <div key={index} className="flex justify-between items-center opacity-95">
                       <div className="flex items-center gap-3">
                         <span className="w-8 h-8 rounded-lg bg-[#1E293B] flex justify-center items-center font-black text-xs text-[#94A3B8]">{item.quantity}x</span>
                         <span className="font-bold text-[#E2E8F0]">{item.name}</span>
