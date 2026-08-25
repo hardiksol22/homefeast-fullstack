@@ -9,9 +9,12 @@ const Orders = () => {
   
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [cancelling, setCancelling] = useState(null); // 🟢 State for cancel loader
+  const [cancelling, setCancelling] = useState(null); 
 
   const token = user?.token || user?.user?.token;
+  
+  // 🟢 FIX 1: User ID nikalna zaroori hai backend ke liye
+  const userId = user?._id || user?.id || user?.user?._id || user?.user?.id;
 
   // 📡 FETCH REAL ORDERS FROM BACKEND
   useEffect(() => {
@@ -21,8 +24,12 @@ const Orders = () => {
     }
 
     const fetchMyOrders = async () => {
+      // Agar ID abhi load nahi hui hai toh API hit mat karo
+      if (!userId) return;
+
       try {
-        const response = await fetch(`https://homefeast-fullstack.onrender.com/api/orders/customer`, {
+        // 🟢 FIX 2: Sahi URL update kar diya gaya hai (Jo aapke paymentController me hai)
+        const response = await fetch(`https://homefeast-fullstack.onrender.com/api/payment/orders/${userId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -31,7 +38,7 @@ const Orders = () => {
         if (response.ok) {
           const data = await response.json();
           // Naye orders upar dikhane ke liye reverse kar rahe hain
-          setOrders(data.reverse());
+          setOrders(Array.isArray(data) ? data.reverse() : []);
         } else {
           setOrders([]);
         }
@@ -47,7 +54,7 @@ const Orders = () => {
     fetchMyOrders();
     const interval = setInterval(fetchMyOrders, 20000); 
     return () => clearInterval(interval);
-  }, [user, token, navigate]);
+  }, [user, token, userId, navigate]); // 🟢 userId ko dependency array me add kiya
 
   // 🛑 CANCEL ORDER & REFUND FUNCTION
   const handleCancelOrder = async (orderId) => {
