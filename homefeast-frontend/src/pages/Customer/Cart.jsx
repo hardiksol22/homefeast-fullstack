@@ -71,7 +71,7 @@ const Cart = () => {
   // 💰 CALCULATIONS
   const subtotal = cartItems.reduce((acc, item) => acc + ((item.dish?.price || item.price || 0) * item.quantity), 0);
   const platformFee = subtotal > 0 ? Math.round(subtotal * 0.05) : 0;
-  const deliveryFee = subtotal > 0 ? 40 : 0;
+  const deliveryFee = subtotal > 0 ? 0 : 0;
   const grandTotal = subtotal + platformFee + deliveryFee;
 
   // 📄 GENERATE SECURE TAX INVOICE (PDF)

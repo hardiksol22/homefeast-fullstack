@@ -9,6 +9,7 @@ const Orders = () => {
   
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(null); // 🟢 State for cancel loader
 
   const token = user?.token || user?.user?.token;
 
@@ -32,7 +33,6 @@ const Orders = () => {
           // Naye orders upar dikhane ke liye reverse kar rahe hain
           setOrders(data.reverse());
         } else {
-          // 🛑 Dummy fallback data poori tarah hata diya gaya hai
           setOrders([]);
         }
       } catch (error) {
@@ -45,10 +45,43 @@ const Orders = () => {
     };
 
     fetchMyOrders();
-    // Active orders check karne ke liye har 20 sec me refresh
     const interval = setInterval(fetchMyOrders, 20000); 
     return () => clearInterval(interval);
   }, [user, token, navigate]);
+
+  // 🛑 CANCEL ORDER & REFUND FUNCTION
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm("Are you sure you want to cancel this order? The amount will be refunded to your bank account.")) return;
+    
+    setCancelling(orderId);
+    const toastId = toast.loading("Initiating refund...");
+
+    try {
+      const res = await fetch('https://homefeast-fullstack.onrender.com/api/payment/cancel', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ orderId })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.success(data.message || "Order Cancelled & Refunded!", { id: toastId });
+        setOrders(prev => prev.map(order => 
+          order._id === orderId ? { ...order, status: 'Cancelled', paymentStatus: 'Refunded' } : order
+        ));
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to cancel order", { id: toastId });
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   // Order sorting: Active vs Past
   const activeOrders = orders.filter(o => !['Delivered', 'Cancelled'].includes(o.status));
@@ -123,9 +156,20 @@ const Orders = () => {
                             <h3 className="text-2xl font-black text-[#F8FAFC] mb-1">{order.provider?.kitchenName || 'Chef Kitchen'}</h3>
                             <p className="text-[#64748B] text-sm font-medium">Order ID: #{order._id.slice(-6).toUpperCase()}</p>
                           </div>
-                          <div className="text-left md:text-right">
+                          
+                          {/* 🟢 TOTAL AMOUNT & CANCEL BUTTON */}
+                          <div className="text-left md:text-right flex flex-col justify-start md:items-end">
                             <p className="text-xs font-bold uppercase tracking-widest text-[#94A3B8] mb-1">Total Amount</p>
-                            <p className="text-3xl font-black text-[#10B981]">₹{order.totalAmount || order.total}</p>
+                            <p className="text-3xl font-black text-[#10B981] mb-3">₹{order.totalAmount || order.total}</p>
+                            
+                            {/* CANCEL BUTTON */}
+                            <button 
+                              onClick={() => handleCancelOrder(order._id)}
+                              disabled={cancelling === order._id}
+                              className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 text-xs font-black rounded-xl transition-all disabled:opacity-50"
+                            >
+                              {cancelling === order._id ? "Cancelling..." : "Cancel & Refund"}
+                            </button>
                           </div>
                         </div>
 
