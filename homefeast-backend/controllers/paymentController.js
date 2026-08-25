@@ -39,7 +39,6 @@ const verifyPayment = async (req, res) => {
       totalAmount 
     } = req.body;
     
-    // 🛡️ Debugging logs to verify keys and IDs on Render
     console.log("Verifying payment for Order ID:", razorpay_order_id);
 
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
@@ -49,16 +48,23 @@ const verifyPayment = async (req, res) => {
       .digest("hex");
 
     if (razorpay_signature === expectedSign) {
+      
+      // 🚀 FIX: Extracting Provider ID from the cart items
+      // Cart items mein se kitchen/provider ki ID nikal rahe hain taaki DB naraz na ho
+      const providerId = items[0]?.dish?.cook?._id || items[0]?.dish?.cook || items[0]?.provider || null;
+
       const newOrder = new Order({
         user: userId,
+        provider: providerId, // 🟢 FIX: Added missing provider field!
         items: items,
         totalAmount: totalAmount,
         paymentStatus: 'Completed',
-        orderStatus: 'Placed',
+        orderStatus: 'Pending', // 🟢 FIX: Changed 'Placed' to 'Pending'
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id
       });
 
+      // Ab database isko 100% khushi-khushi save karega
       await newOrder.save(); 
 
       return res.status(200).json({ 
@@ -80,7 +86,11 @@ const verifyPayment = async (req, res) => {
 const getUserOrders = async (req, res) => {
   try {
     const userId = req.params.userId;
-    const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
+    // user aur provider dono ko populate kar rahe hain taaki frontend par details dikhe
+    const orders = await Order.find({ user: userId })
+      .populate('provider', 'kitchenName name email') 
+      .sort({ createdAt: -1 });
+      
     res.status(200).json(orders);
   } catch (error) {
     console.error("Error fetching orders:", error);
@@ -96,7 +106,8 @@ const cancelAndRefundOrder = async (req, res) => {
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    if (order.orderStatus !== 'Placed') {
+    // Pending ya New status wale hi cancel ho sakte hain
+    if (!['Placed', 'Pending', 'New'].includes(order.orderStatus)) {
       return res.status(400).json({ message: "Order cannot be cancelled at this stage." });
     }
 
