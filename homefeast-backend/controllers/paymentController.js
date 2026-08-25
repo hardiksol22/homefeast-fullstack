@@ -49,22 +49,24 @@ const verifyPayment = async (req, res) => {
 
     if (razorpay_signature === expectedSign) {
       
-      // 🚀 FIX: Extracting Provider ID from the cart items
-      // Cart items mein se kitchen/provider ki ID nikal rahe hain taaki DB naraz na ho
-      const providerId = items[0]?.dish?.cook?._id || items[0]?.dish?.cook || items[0]?.provider || null;
+      // 🚀 FIX 1: Mapping items to match your Order.js Schema exactly!
+      const formattedItems = items.map(item => ({
+        name: item.dish?.name || item.name || 'Unknown Dish',
+        price: item.dish?.price || item.price || 0,
+        quantity: item.quantity || 1,
+        image: item.dish?.image || item.image || ''
+      }));
 
       const newOrder = new Order({
         user: userId,
-        provider: providerId, // 🟢 FIX: Added missing provider field!
-        items: items,
+        items: formattedItems, // 🟢 Yahan formattedItems bhejna zaroori hai
         totalAmount: totalAmount,
         paymentStatus: 'Completed',
-        orderStatus: 'Pending', // 🟢 FIX: Changed 'Placed' to 'Pending'
+        orderStatus: 'Placed', // 🟢 'Placed' hi valid hai schema ke hisaab se
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id
       });
 
-      // Ab database isko 100% khushi-khushi save karega
       await newOrder.save(); 
 
       return res.status(200).json({ 
@@ -86,10 +88,9 @@ const verifyPayment = async (req, res) => {
 const getUserOrders = async (req, res) => {
   try {
     const userId = req.params.userId;
-    // user aur provider dono ko populate kar rahe hain taaki frontend par details dikhe
-    const orders = await Order.find({ user: userId })
-      .populate('provider', 'kitchenName name email') 
-      .sort({ createdAt: -1 });
+    
+    // 🚀 FIX 2: Removed .populate('provider') to fix the 500 error!
+    const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
       
     res.status(200).json(orders);
   } catch (error) {
@@ -106,7 +107,6 @@ const cancelAndRefundOrder = async (req, res) => {
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // Pending ya New status wale hi cancel ho sakte hain
     if (!['Placed', 'Pending', 'New'].includes(order.orderStatus)) {
       return res.status(400).json({ message: "Order cannot be cancelled at this stage." });
     }
