@@ -108,7 +108,6 @@ const KitchenMenu = () => {
   }
 
   // 👥 KITCHEN TEAM LOGIC (100% Real Database Connect)
-  // Agar backend me array hai toh wo dikhayenge, warna sirf registered lead chef ka single card banayenge
   const kitchenTeam = kitchen.team && kitchen.team.length > 0 
     ? kitchen.team 
     : [
@@ -135,6 +134,9 @@ const KitchenMenu = () => {
           src={kitchen.image || "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1920&q=80"} 
           alt={kitchen.kitchenName} 
           className="w-full h-full object-cover opacity-60" 
+          onError={(e) => {
+            e.target.style.display = 'none';
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#080D12] via-[#080D12]/70 to-transparent"></div>
         
@@ -192,7 +194,14 @@ const KitchenMenu = () => {
               {kitchenTeam.map((chef, idx) => (
                 <div key={idx} className="bg-[#080D12] border border-[#263241] p-5 rounded-2xl flex items-center gap-5 hover:border-[#10B981]/40 transition-colors shadow-inner group">
                   <div className="relative">
-                    <img src={getAvatar(chef.name)} alt={chef.name} className="w-16 h-16 rounded-full border-2 border-[#263241] group-hover:border-[#10B981] object-cover transition-colors" />
+                    <img 
+                      src={getAvatar(chef.name)} 
+                      alt={chef.name} 
+                      className="w-16 h-16 rounded-full border-2 border-[#263241] group-hover:border-[#10B981] object-cover transition-colors"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
                     {idx === 0 && <span className="absolute -bottom-2 -right-2 text-lg">👑</span>}
                   </div>
                   <div>
@@ -219,7 +228,14 @@ const KitchenMenu = () => {
             {popularDishes.map((dish) => (
               <div key={dish._id} className="bg-[#111827]/80 backdrop-blur-md border border-[#F4B942]/30 rounded-[28px] overflow-hidden group shadow-[0_10px_30px_rgba(244,185,66,0.05)] hover:shadow-[0_10px_30px_rgba(244,185,66,0.15)] transition-all transform hover:-translate-y-1">
                 <div className="relative h-48 w-full bg-[#1E293B] overflow-hidden">
-                  <img src={dish.image} alt={dish.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                  <img 
+                    src={dish.image} 
+                    alt={dish.name} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
                   <div className="absolute top-3 right-3 bg-[#F4B942] text-[#080D12] text-[10px] font-black uppercase px-2 py-1 rounded-md tracking-wider shadow-lg">Bestseller</div>
                   <div className="absolute bottom-3 left-3 bg-white p-1 rounded-md shadow-md">
                     <span className={`block w-2.5 h-2.5 rounded-full ${dish.type === 'Veg' ? 'bg-green-600' : 'bg-red-600'}`}></span>
@@ -252,7 +268,14 @@ const KitchenMenu = () => {
             {regularDishes.map((dish) => (
               <div key={dish._id} className="bg-[#111827] border border-[#263241] rounded-[24px] overflow-hidden group flex shadow-md hover:border-[#10B981]/40 transition-all h-[150px]">
                 <div className="w-[130px] h-full shrink-0 relative overflow-hidden bg-[#1E293B]">
-                  <img src={dish.image} alt={dish.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100" />
+                  <img 
+                    src={dish.image} 
+                    alt={dish.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100" 
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
                   <div className="absolute top-2 left-2 w-4 h-4 rounded bg-white flex items-center justify-center shadow-md">
                     <span className={`w-2 h-2 rounded-full ${dish.type === 'Veg' ? 'bg-green-600' : 'bg-red-600'}`}></span>
                   </div>

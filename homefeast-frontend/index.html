@@ -4,7 +4,15 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>homefeast-frontend</title>
+    
+    <!-- 🌟 Professional Title -->
+    <title>HomeFeast | Fresh Home Cooked Meals</title>
+    
+    <!-- 🟢 MIXED CONTENT FIX: Har HTTP link ko automatically HTTPS mein convert karega -->
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    
+    <!-- 🟢 SENSOR WARNINGS FIX: Razorpay ke accelerometer/gyroscope warnings ko rokega -->
+    <meta http-equiv="Permissions-Policy" content="accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=*, usb=()">
   </head>
   <body>
     <div id="root"></div>

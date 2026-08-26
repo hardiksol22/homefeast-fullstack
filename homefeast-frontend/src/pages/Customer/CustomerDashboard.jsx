@@ -173,7 +173,13 @@ const CustomerDashboard = () => {
                     <Link key={`ai-${provider._id}`} to={`/provider/${provider._id}?source=explore`} className="block group">
                       <div className="bg-[#111827] border border-[#263241] rounded-[24px] p-4 flex gap-4 hover:border-[#10B981]/50 hover:bg-[#1E293B]/50 transition-all shadow-lg items-center">
                         <div className="relative">
-                          <img src={getAvatar(provider.kitchenName)} className="w-16 h-16 rounded-full border-2 border-[#10B981] object-cover" alt="Kitchen Avatar" />
+                          {/* 🟢 FIXED IMAGE 1 */}
+                          <img 
+                            src={getAvatar(provider.kitchenName)} 
+                            className="w-16 h-16 rounded-full border-2 border-[#10B981] object-cover" 
+                            alt="Kitchen Avatar" 
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
                           <div className="absolute -bottom-1 -right-1 bg-[#080D12] text-[10px] w-6 h-6 flex items-center justify-center rounded-full border border-[#263241]">🍽️</div>
                         </div>
                         <div className="flex-1 py-1">
@@ -199,7 +205,13 @@ const CustomerDashboard = () => {
                       
                       {/* Kitchen Cover Image */}
                       <div className="relative h-48 w-full overflow-hidden rounded-t-[32px]">
-                        <img src={getKitchenImage(provider)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" alt="Kitchen Cover" />
+                        {/* 🟢 FIXED IMAGE 2 */}
+                        <img 
+                          src={getKitchenImage(provider)} 
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" 
+                          alt="Kitchen Cover" 
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
                         <div className="absolute inset-0 bg-gradient-to-t from-[#080D12] via-transparent to-transparent"></div>
                       </div>
 
@@ -208,10 +220,12 @@ const CustomerDashboard = () => {
                         {/* Kitchen Avatar Overlapping */}
                         <div className="absolute -top-10 left-6 z-20">
                           <div className="relative group-hover:-translate-y-2 transition-transform duration-300">
+                             {/* 🟢 FIXED IMAGE 3 */}
                              <img 
                                src={getAvatar(provider.kitchenName)} 
                                className="w-20 h-20 rounded-full border-4 border-[#080D12] shadow-xl object-cover" 
                                alt="Kitchen Avatar" 
+                               onError={(e) => { e.target.style.display = 'none'; }}
                              />
                              <div className="absolute bottom-0 right-0 bg-[#10B981] w-5 h-5 rounded-full border-2 border-[#080D12] shadow-sm"></div>
                           </div>

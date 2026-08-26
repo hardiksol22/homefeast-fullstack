@@ -76,7 +76,7 @@ const Navbar = () => {
                 </Link>
               ))}
 
-              {/* 🟢 DESKTOP MY ORDERS LINK (Added here so it stays right next to Explore/Chefs) */}
+              {/* 🟢 DESKTOP MY ORDERS LINK */}
               {user && !isCook && !isAdmin && (
                 <Link to="/orders" className={`relative group text-[15px] font-bold transition-all duration-300 ${isActive('/orders') ? 'text-[#10B981]' : 'text-[#CBD5E1] hover:text-[#10B981]'}`}>
                   My Orders

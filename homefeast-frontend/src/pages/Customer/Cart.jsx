@@ -297,7 +297,13 @@ const Cart = () => {
               {cartItems.map((item) => (
                 <div key={item._id} className="bg-[#111827] border border-[#263241] rounded-[24px] p-4 flex gap-5 items-center shadow-lg hover:border-[#10B981]/30 transition-colors group">
                   <div className="w-24 h-24 rounded-xl overflow-hidden bg-[#1E293B] shrink-0">
-                    <img src={item.dish?.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"} alt={item.dish?.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    {/* 🟢 FIXED IMAGE TAG */}
+                    <img 
+                      src={item.dish?.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"} 
+                      alt={item.dish?.name} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-start mb-1">
