@@ -1,6 +1,6 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const Order = require('../models/Order'); // MongoDB Order Model
+const Order = require('../models/Order'); // ✅ Sahi Import (Bina brackets ke)
 
 // 🟢 1. CREATE ORDER
 const createOrder = async (req, res) => {
@@ -49,7 +49,7 @@ const verifyPayment = async (req, res) => {
 
     if (razorpay_signature === expectedSign) {
       
-      // 🚀 FIX 1: Mapping items to match your Order.js Schema exactly!
+      // 🚀 THE ULTIMATE FIX: Mapping items to match your Order.js Schema exactly!
       const formattedItems = items.map(item => ({
         name: item.dish?.name || item.name || 'Unknown Dish',
         price: item.dish?.price || item.price || 0,
@@ -59,10 +59,10 @@ const verifyPayment = async (req, res) => {
 
       const newOrder = new Order({
         user: userId,
-        items: formattedItems, // 🟢 Yahan formattedItems bhejna zaroori hai
+        items: formattedItems, // 🟢 Yahan ab formattedItems bhej rahe hain
         totalAmount: totalAmount,
         paymentStatus: 'Completed',
-        orderStatus: 'Placed', // 🟢 'Placed' hi valid hai schema ke hisaab se
+        orderStatus: 'Placed', // 'Placed' hi valid hai aapke schema ke hisaab se
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id
       });
@@ -89,7 +89,7 @@ const getUserOrders = async (req, res) => {
   try {
     const userId = req.params.userId;
     
-    // 🚀 FIX 2: Removed .populate('provider') to fix the 500 error!
+    // 🚀 FIX: Removed .populate('provider') to prevent 500 crash
     const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
       
     res.status(200).json(orders);
@@ -137,6 +137,7 @@ const cancelAndRefundOrder = async (req, res) => {
   }
 };
 
+// ✅ Sahi Export (Yahan sirf functions jayenge)
 module.exports = { 
   createOrder, 
   verifyPayment,
