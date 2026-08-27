@@ -1,6 +1,6 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const Order = require('../models/Order'); // ✅ Sahi Import
+const Order = require('../models/Order'); 
 
 // 🟢 1. CREATE ORDER
 const createOrder = async (req, res) => {
@@ -13,7 +13,7 @@ const createOrder = async (req, res) => {
     const { amount } = req.body;
     
     const options = {
-      amount: Math.round(amount * 100), // Paise me convert kiya
+      amount: Math.round(amount * 100), 
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
     };
@@ -49,7 +49,6 @@ const verifyPayment = async (req, res) => {
 
     if (razorpay_signature === expectedSign) {
       
-      // 🚀 FIX 1: Cart items mein se Cook/Provider ki ID nikalna (Taaki Cook ko order dikhe)
       let providerId = null;
       if (items && items.length > 0) {
         providerId = items[0]?.dish?.cook?._id || items[0]?.dish?.cook || items[0]?.provider || null;
@@ -64,7 +63,7 @@ const verifyPayment = async (req, res) => {
 
       const newOrder = new Order({
         user: userId,
-        provider: providerId, // 🟢 YEH ADD HO GAYA! Ab Cook Dashboard par "Active Orders" badh jayega
+        provider: providerId, 
         items: formattedItems, 
         totalAmount: totalAmount,
         paymentStatus: 'Completed',
@@ -112,7 +111,6 @@ const cancelAndRefundOrder = async (req, res) => {
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // 🚀 FIX 2: Checking both variables dynamically so cancellation never fails!
     const currentStatus = order.orderStatus || order.status;
 
     if (!['Placed', 'Pending', 'New'].includes(currentStatus)) {
@@ -145,10 +143,27 @@ const cancelAndRefundOrder = async (req, res) => {
   }
 };
 
-// ✅ Sahi Export
+// 🚀 5. THE MISSING FIX: GET PROVIDER (COOK) ORDERS
+const getProviderOrders = async (req, res) => {
+  try {
+    const providerId = req.params.providerId;
+    
+    const orders = await Order.find({ provider: providerId })
+                              .populate('user', 'name email')
+                              .sort({ createdAt: -1 });
+      
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error("Error fetching provider orders:", error);
+    res.status(500).json({ message: "Server error while fetching provider orders" });
+  }
+};
+
+// ✅ Sahi Export (getProviderOrders add kar diya gaya hai)
 module.exports = { 
   createOrder, 
   verifyPayment,
   getUserOrders,
-  cancelAndRefundOrder 
+  cancelAndRefundOrder,
+  getProviderOrders
 };
