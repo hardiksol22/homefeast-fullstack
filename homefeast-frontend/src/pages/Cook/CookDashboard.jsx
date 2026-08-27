@@ -98,8 +98,11 @@ const CookDashboard = () => {
   // Fetch Real Live Orders & Payout Calculations
   useEffect(() => {
     const fetchDashboardData = async () => {
+      if (!cookId) return; // Cook ID zaroori hai
+
       try {
-        const response = await fetch(`https://homefeast-fullstack.onrender.com/api/orders/provider`, {
+        // 🚀 FIX: URL update kiya gaya hai jo backend ke naye route se match karega!
+        const response = await fetch(`https://homefeast-fullstack.onrender.com/api/payment/provider-orders/${cookId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -135,7 +138,7 @@ const CookDashboard = () => {
       const interval = setInterval(fetchDashboardData, 30000);
       return () => clearInterval(interval);
     }
-  }, [token]);
+  }, [token, cookId]);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -307,8 +310,8 @@ const CookDashboard = () => {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {activeOrders.map((order) => (
-                  <div key={order._id} className={`bg-[#111827] rounded-3xl border overflow-hidden shadow-xl flex flex-col transition-all duration-300 ${order.status === 'New' || order.status === 'Pending' ? 'border-[#F4B942] shadow-[0_0_20px_rgba(244,185,66,0.15)]' : 'border-[#263241]'}`}>
-                    <div className={`px-6 py-4 border-b flex justify-between items-center ${order.status === 'New' || order.status === 'Pending' ? 'bg-[#F4B942]/10 border-[#F4B942]/20' : 'bg-[#1E293B]/30 border-[#263241]'}`}>
+                  <div key={order._id} className={`bg-[#111827] rounded-3xl border overflow-hidden shadow-xl flex flex-col transition-all duration-300 ${order.status === 'New' || order.status === 'Pending' || order.status === 'Placed' ? 'border-[#F4B942] shadow-[0_0_20px_rgba(244,185,66,0.15)]' : 'border-[#263241]'}`}>
+                    <div className={`px-6 py-4 border-b flex justify-between items-center ${order.status === 'New' || order.status === 'Pending' || order.status === 'Placed' ? 'bg-[#F4B942]/10 border-[#F4B942]/20' : 'bg-[#1E293B]/30 border-[#263241]'}`}>
                       <div>
                         <p className="text-xs font-bold uppercase tracking-widest text-[#94A3B8] mb-1">
                           {order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : "Just Now"}
@@ -316,11 +319,11 @@ const CookDashboard = () => {
                         <h3 className="text-lg font-black text-[#F8FAFC]">#{order._id.slice(-6).toUpperCase()}</h3>
                       </div>
                       <div className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 ${
-                        order.status === 'New' || order.status === 'Pending' ? 'bg-[#F4B942] text-[#080D12]' : 
+                        order.status === 'New' || order.status === 'Pending' || order.status === 'Placed' ? 'bg-[#F4B942] text-[#080D12]' : 
                         order.status === 'Preparing' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' : 
                         'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30'
                       }`}>
-                        {(order.status === 'New' || order.status === 'Pending') && <span className="w-1.5 h-1.5 rounded-full bg-[#080D12] animate-ping"></span>}
+                        {(order.status === 'New' || order.status === 'Pending' || order.status === 'Placed') && <span className="w-1.5 h-1.5 rounded-full bg-[#080D12] animate-ping"></span>}
                         {order.status || 'Pending'}
                       </div>
                     </div>
@@ -344,7 +347,7 @@ const CookDashboard = () => {
                           <p className="text-xl font-black text-[#10B981]">₹{order.totalAmount || order.total || 0}</p>
                         </div>
                         <div className="flex gap-2">
-                          {(order.status === 'New' || order.status === 'Pending') && (
+                          {(order.status === 'New' || order.status === 'Pending' || order.status === 'Placed') && (
                             <button onClick={() => updateOrderStatus(order._id, 'Preparing')} className="px-5 py-2.5 bg-[#F4B942] text-[#080D12] font-black rounded-xl hover:bg-[#D9A02E] transition-all shadow-[0_0_15px_rgba(244,185,66,0.3)] transform hover:-translate-y-0.5 text-sm uppercase tracking-wider">
                               Accept & Prepare
                             </button>
