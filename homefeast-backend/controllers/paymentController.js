@@ -49,7 +49,12 @@ const verifyPayment = async (req, res) => {
 
     if (razorpay_signature === expectedSign) {
       
-      // 🚀 THE ULTIMATE FIX: Mapping items to match your Order.js Schema exactly!
+      // 🚀 FIX 1: Cart items mein se Cook/Provider ki ID nikalna (Taaki Cook ko order dikhe)
+      let providerId = null;
+      if (items && items.length > 0) {
+        providerId = items[0]?.dish?.cook?._id || items[0]?.dish?.cook || items[0]?.provider || null;
+      }
+
       const formattedItems = items.map(item => ({
         name: item.dish?.name || item.name || 'Unknown Dish',
         price: item.dish?.price || item.price || 0,
@@ -59,6 +64,7 @@ const verifyPayment = async (req, res) => {
 
       const newOrder = new Order({
         user: userId,
+        provider: providerId, // 🟢 YEH ADD HO GAYA! Ab Cook Dashboard par "Active Orders" badh jayega
         items: formattedItems, 
         totalAmount: totalAmount,
         paymentStatus: 'Completed',
@@ -89,7 +95,6 @@ const getUserOrders = async (req, res) => {
   try {
     const userId = req.params.userId;
     
-    // 🚀 FIX: Removed .populate('provider') to prevent 500 crash
     const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
       
     res.status(200).json(orders);
@@ -107,7 +112,7 @@ const cancelAndRefundOrder = async (req, res) => {
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // 🚀 THE FIX: Checking both variables dynamically so cancellation never fails!
+    // 🚀 FIX 2: Checking both variables dynamically so cancellation never fails!
     const currentStatus = order.orderStatus || order.status;
 
     if (!['Placed', 'Pending', 'New'].includes(currentStatus)) {
@@ -140,7 +145,7 @@ const cancelAndRefundOrder = async (req, res) => {
   }
 };
 
-// ✅ Sahi Export (Yahan sirf functions jayenge)
+// ✅ Sahi Export
 module.exports = { 
   createOrder, 
   verifyPayment,
