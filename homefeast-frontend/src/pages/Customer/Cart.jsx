@@ -211,6 +211,8 @@ const Cart = () => {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 userId: currentUser?._id, 
+                // 🚀 FIX: Frontend se direct Cook(Provider) ki ID bhej rahe hain
+                providerId: cartItems[0]?.dish?.cook?._id || cartItems[0]?.dish?.cook || cartItems[0]?.provider || null,
                 items: cartItems,
                 totalAmount: grandTotal
               })
