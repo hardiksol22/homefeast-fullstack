@@ -1,6 +1,6 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const Order = require('../models/Order'); // ✅ Sahi Import (Bina brackets ke)
+const Order = require('../models/Order'); // ✅ Sahi Import
 
 // 🟢 1. CREATE ORDER
 const createOrder = async (req, res) => {
@@ -59,10 +59,10 @@ const verifyPayment = async (req, res) => {
 
       const newOrder = new Order({
         user: userId,
-        items: formattedItems, // 🟢 Yahan ab formattedItems bhej rahe hain
+        items: formattedItems, 
         totalAmount: totalAmount,
         paymentStatus: 'Completed',
-        orderStatus: 'Placed', // 'Placed' hi valid hai aapke schema ke hisaab se
+        orderStatus: 'Placed', 
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id
       });
@@ -107,7 +107,10 @@ const cancelAndRefundOrder = async (req, res) => {
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    if (!['Placed', 'Pending', 'New'].includes(order.orderStatus)) {
+    // 🚀 THE FIX: Checking both variables dynamically so cancellation never fails!
+    const currentStatus = order.orderStatus || order.status;
+
+    if (!['Placed', 'Pending', 'New'].includes(currentStatus)) {
       return res.status(400).json({ message: "Order cannot be cancelled at this stage." });
     }
 

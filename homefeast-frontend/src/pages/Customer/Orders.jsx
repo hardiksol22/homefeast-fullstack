@@ -13,7 +13,6 @@ const Orders = () => {
 
   const token = user?.token || user?.user?.token;
   
-  // 🟢 FIX 1: User ID nikalna zaroori hai backend ke liye
   const userId = user?._id || user?.id || user?.user?._id || user?.user?.id;
 
   // 📡 FETCH REAL ORDERS FROM BACKEND
@@ -24,11 +23,9 @@ const Orders = () => {
     }
 
     const fetchMyOrders = async () => {
-      // Agar ID abhi load nahi hui hai toh API hit mat karo
       if (!userId) return;
 
       try {
-        // 🟢 FIX 2: Sahi URL update kar diya gaya hai (Jo aapke paymentController me hai)
         const response = await fetch(`https://homefeast-fullstack.onrender.com/api/payment/orders/${userId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -37,7 +34,6 @@ const Orders = () => {
 
         if (response.ok) {
           const data = await response.json();
-          // Naye orders upar dikhane ke liye reverse kar rahe hain
           setOrders(Array.isArray(data) ? data.reverse() : []);
         } else {
           setOrders([]);
@@ -54,7 +50,7 @@ const Orders = () => {
     fetchMyOrders();
     const interval = setInterval(fetchMyOrders, 20000); 
     return () => clearInterval(interval);
-  }, [user, token, userId, navigate]); // 🟢 userId ko dependency array me add kiya
+  }, [user, token, userId, navigate]); 
 
   // 🛑 CANCEL ORDER & REFUND FUNCTION
   const handleCancelOrder = async (orderId) => {
@@ -78,7 +74,7 @@ const Orders = () => {
       if (res.ok) {
         toast.success(data.message || "Order Cancelled & Refunded!", { id: toastId });
         setOrders(prev => prev.map(order => 
-          order._id === orderId ? { ...order, status: 'Cancelled', paymentStatus: 'Refunded' } : order
+          order._id === orderId ? { ...order, orderStatus: 'Cancelled', status: 'Cancelled', paymentStatus: 'Refunded' } : order
         ));
       } else {
         throw new Error(data.message);
@@ -90,13 +86,13 @@ const Orders = () => {
     }
   };
 
-  // Order sorting: Active vs Past
-  const activeOrders = orders.filter(o => !['Delivered', 'Cancelled'].includes(o.status));
-  const pastOrders = orders.filter(o => ['Delivered', 'Cancelled'].includes(o.status));
+  // 🚀 FIX: Dono variables (orderStatus aur status) ko check kar rahe hain taaki UI break na ho
+  const activeOrders = orders.filter(o => !['Delivered', 'Cancelled'].includes(o.orderStatus || o.status));
+  const pastOrders = orders.filter(o => ['Delivered', 'Cancelled'].includes(o.orderStatus || o.status));
 
   // 🎨 Status Progress Bar Engine
   const getStatusProgress = (status) => {
-    if (status === 'New' || status === 'Pending') return { width: '25%', color: 'bg-rose-500', text: 'Order Placed', icon: '📝' };
+    if (status === 'New' || status === 'Pending' || status === 'Placed') return { width: '25%', color: 'bg-rose-500', text: 'Order Placed', icon: '📝' };
     if (status === 'Preparing') return { width: '60%', color: 'bg-[#F4B942]', text: 'Preparing Food', icon: '👨‍🍳' };
     if (status === 'Ready') return { width: '90%', color: 'bg-blue-500', text: 'Ready for Pickup', icon: '🛍️' };
     if (status === 'Delivered') return { width: '100%', color: 'bg-[#10B981]', text: 'Delivered', icon: '✅' };
@@ -149,7 +145,8 @@ const Orders = () => {
                 </h2>
                 <div className="space-y-6">
                   {activeOrders.map((order) => {
-                    const progress = getStatusProgress(order.status || 'Pending');
+                    // 🚀 FIX: Progress bar ke liye bhi dono status pass kiye
+                    const progress = getStatusProgress(order.orderStatus || order.status || 'Pending');
                     
                     return (
                       <div key={order._id} className="bg-[#111827]/90 backdrop-blur-md border border-[#263241] rounded-[24px] p-6 sm:p-8 shadow-xl relative overflow-hidden group hover:border-[#F4B942]/50 transition-all">
@@ -225,30 +222,34 @@ const Orders = () => {
               <section>
                 <h2 className="text-xl font-black mb-6 text-[#94A3B8]">Past Orders</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {pastOrders.map((order) => (
-                    <div key={order._id} className="bg-[#111827]/50 border border-[#263241] rounded-[24px] p-6 hover:bg-[#111827] transition-all">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748B] mb-1">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "Past"}
-                          </p>
-                          <h3 className="text-lg font-black text-[#F8FAFC]">{order.provider?.kitchenName || 'Chef Kitchen'}</h3>
+                  {pastOrders.map((order) => {
+                    // 🚀 FIX: Past orders tag ke liye bhi correct status extract kiya
+                    const statusText = order.orderStatus || order.status || 'Past';
+                    return (
+                      <div key={order._id} className="bg-[#111827]/50 border border-[#263241] rounded-[24px] p-6 hover:bg-[#111827] transition-all">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748B] mb-1">
+                              {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "Past"}
+                            </p>
+                            <h3 className="text-lg font-black text-[#F8FAFC]">{order.provider?.kitchenName || 'Chef Kitchen'}</h3>
+                          </div>
+                          <div className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${statusText === 'Delivered' ? 'bg-[#10B981]/10 text-[#10B981]' : 'bg-red-500/10 text-red-500'}`}>
+                            {statusText}
+                          </div>
                         </div>
-                        <div className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${order.status === 'Delivered' ? 'bg-[#10B981]/10 text-[#10B981]' : 'bg-red-500/10 text-red-500'}`}>
-                          {order.status}
+                        
+                        <p className="text-[#94A3B8] text-sm mb-4 line-clamp-1">
+                          {order.items?.map(i => `${i.quantity}x ${i.dish?.name || i.name}`).join(', ')}
+                        </p>
+                        
+                        <div className="border-t border-[#263241] pt-4 flex justify-between items-center mt-auto">
+                          <p className="text-xl font-black text-[#F8FAFC]">₹{order.totalAmount || order.total}</p>
+                          <button className="text-xs font-bold text-[#10B981] hover:text-[#F8FAFC] transition-colors">Reorder</button>
                         </div>
                       </div>
-                      
-                      <p className="text-[#94A3B8] text-sm mb-4 line-clamp-1">
-                        {order.items?.map(i => `${i.quantity}x ${i.dish?.name || i.name}`).join(', ')}
-                      </p>
-                      
-                      <div className="border-t border-[#263241] pt-4 flex justify-between items-center mt-auto">
-                        <p className="text-xl font-black text-[#F8FAFC]">₹{order.totalAmount || order.total}</p>
-                        <button className="text-xs font-bold text-[#10B981] hover:text-[#F8FAFC] transition-colors">Reorder</button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             )}

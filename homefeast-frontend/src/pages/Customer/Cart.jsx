@@ -165,7 +165,6 @@ const Cart = () => {
     
     setProcessingPay(true);
     
-    // Step 1: Load Razorpay SDK
     const res = await loadRazorpayScript();
     if (!res) {
       toast.error("Razorpay SDK failed to load. Check your internet connection.");
@@ -174,7 +173,6 @@ const Cart = () => {
     }
 
     try {
-      // 🟢 FIX: URL updated to /api/payment/order (As per your new backend routes)
       const createOrderRes = await fetch('https://homefeast-fullstack.onrender.com/api/payment/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -187,7 +185,6 @@ const Cart = () => {
 
       const orderData = await createOrderRes.json();
 
-      // Step 3: Open Real Razorpay Popup
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID || "YOUR_RAZORPAY_KEY_ID", 
         amount: orderData.amount,
@@ -197,11 +194,9 @@ const Cart = () => {
         image: "https://your-logo-url.png",
         order_id: orderData.id, 
         handler: async function (response) {
-          // Step 4: Razorpay gave success. Now tell backend to verify signature & save order!
           try {
             toast.loading("Verifying Secure Payment...", { id: "verifying" });
             
-            // 🟢 FIX: URL updated to /api/payment/verify aur userId add kar di gayi hai
             const verifyRes = await fetch('https://homefeast-fullstack.onrender.com/api/payment/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -209,7 +204,7 @@ const Cart = () => {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                userId: currentUser?._id, // 👈 Required by your backend controller
+                userId: currentUser?._id, 
                 items: cartItems,
                 totalAmount: grandTotal
               })
@@ -221,8 +216,13 @@ const Cart = () => {
               
               toast.success("Payment Verified & Order Placed! 🎉", { id: "verifying" });
               
-              // Download Real Tax Invoice
-              generatePDFInvoice(dbOrderId, response.razorpay_payment_id);
+              // 🚀 FIX: Secure PDF Generation (App won't crash now)
+              try {
+                generatePDFInvoice(dbOrderId, response.razorpay_payment_id);
+              } catch (pdfErr) {
+                console.error("PDF Error:", pdfErr);
+                toast.error("Invoice generation failed, but order is placed!");
+              }
 
               // Clear Cart
               await fetch('https://homefeast-fullstack.onrender.com/api/cart/clear', {
@@ -245,7 +245,7 @@ const Cart = () => {
           contact: currentUser?.phone || ""
         },
         theme: {
-          color: "#10B981" // Homefeast Emerald Green
+          color: "#10B981" 
         }
       };
 
@@ -297,7 +297,6 @@ const Cart = () => {
               {cartItems.map((item) => (
                 <div key={item._id} className="bg-[#111827] border border-[#263241] rounded-[24px] p-4 flex gap-5 items-center shadow-lg hover:border-[#10B981]/30 transition-colors group">
                   <div className="w-24 h-24 rounded-xl overflow-hidden bg-[#1E293B] shrink-0">
-                    {/* 🟢 FIXED IMAGE TAG */}
                     <img 
                       src={item.dish?.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"} 
                       alt={item.dish?.name} 
