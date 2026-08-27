@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+// 🟢 FIX 1: Naya import tareeka
+import autoTable from 'jspdf-autotable'; 
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -98,7 +99,11 @@ const Cart = () => {
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Order ID: #ORD-${orderId.slice(-6).toUpperCase()}`, 14, 65);
+    
+    // 🟢 FIX: String conversion for safety
+    const safeOrderId = String(orderId || 'NEW');
+    
+    doc.text(`Order ID: #ORD-${safeOrderId.slice(-6).toUpperCase()}`, 14, 65);
     doc.text(`Payment Ref: ${paymentId}`, 14, 72);
     doc.text(`Date: ${date}`, 14, 79);
     doc.text(`Billed To: ${currentUser?.name || 'Customer'}`, 14, 86);
@@ -122,7 +127,8 @@ const Cart = () => {
     tableRows.push(["Platform Fee (5%)", "-", "-", "-", `Rs. ${platformFee}`]);
     tableRows.push(["Delivery Partner Fee", "-", "-", "-", `Rs. ${deliveryFee}`]);
 
-    doc.autoTable({
+    // 🟢 FIX 2: Naya autoTable function use kiya
+    autoTable(doc, {
       startY: 110,
       head: [tableColumn],
       body: tableRows,
@@ -132,7 +138,7 @@ const Cart = () => {
       alternateRowStyles: { fillColor: [248, 250, 252] },
     });
 
-    const finalY = doc.lastAutoTable.finalY || 110;
+    const finalY = doc.lastAutoTable?.finalY || 110;
 
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
@@ -145,7 +151,7 @@ const Cart = () => {
     doc.text("Thank you for choosing HomeFeast! Support your local home chefs. 🍲", 14, finalY + 35);
     doc.text("This is an electronically generated invoice.", 14, finalY + 42);
 
-    doc.save(`HomeFeast_Invoice_${orderId.slice(-6).toUpperCase()}.pdf`);
+    doc.save(`HomeFeast_Invoice_${safeOrderId.slice(-6).toUpperCase()}.pdf`);
   };
 
   // 🛡️ LOAD RAZORPAY SCRIPT SECURELY
@@ -216,7 +222,6 @@ const Cart = () => {
               
               toast.success("Payment Verified & Order Placed! 🎉", { id: "verifying" });
               
-              // 🚀 FIX: Secure PDF Generation (App won't crash now)
               try {
                 generatePDFInvoice(dbOrderId, response.razorpay_payment_id);
               } catch (pdfErr) {
