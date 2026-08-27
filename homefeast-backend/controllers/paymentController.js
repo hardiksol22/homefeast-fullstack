@@ -1,8 +1,7 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const Order = require('../models/Order'); 
+const Order = require('../models/Order');
 
-// 🟢 1. CREATE ORDER
 const createOrder = async (req, res) => {
   try {
     const instance = new Razorpay({
@@ -27,7 +26,6 @@ const createOrder = async (req, res) => {
   }
 };
 
-// 🟢 2. VERIFY PAYMENT & SAVE ORDER
 const verifyPayment = async (req, res) => {
   try {
     const { 
@@ -35,12 +33,11 @@ const verifyPayment = async (req, res) => {
       razorpay_payment_id, 
       razorpay_signature,
       userId, 
+      providerId,
       items, 
       totalAmount 
     } = req.body;
     
-    console.log("Verifying payment for Order ID:", razorpay_order_id);
-
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSign = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -49,9 +46,9 @@ const verifyPayment = async (req, res) => {
 
     if (razorpay_signature === expectedSign) {
       
-      let providerId = null;
-      if (items && items.length > 0) {
-        providerId = items[0]?.dish?.cook?._id || items[0]?.dish?.cook || items[0]?.provider || null;
+      let resolvedProviderId = providerId || null;
+      if (!resolvedProviderId && items && items.length > 0) {
+        resolvedProviderId = items[0]?.dish?.cook?._id || items[0]?.dish?.cook || items[0]?.provider || null;
       }
 
       const formattedItems = items.map(item => ({
@@ -63,7 +60,7 @@ const verifyPayment = async (req, res) => {
 
       const newOrder = new Order({
         user: userId,
-        provider: providerId, 
+        provider: resolvedProviderId, 
         items: formattedItems, 
         totalAmount: totalAmount,
         paymentStatus: 'Completed',
@@ -79,7 +76,7 @@ const verifyPayment = async (req, res) => {
         order: newOrder 
       });
     } else {
-      console.error("Signature Mismatch! Expected:", expectedSign, "Got:", razorpay_signature);
+      console.error("Signature Mismatch!");
       return res.status(400).json({ message: "Invalid signature! Payment verification failed." });
     }
 
@@ -89,13 +86,10 @@ const verifyPayment = async (req, res) => {
   }
 };
 
-// 🟢 3. GET USER ORDERS
 const getUserOrders = async (req, res) => {
   try {
     const userId = req.params.userId;
-    
     const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
-      
     res.status(200).json(orders);
   } catch (error) {
     console.error("Error fetching orders:", error);
@@ -103,7 +97,6 @@ const getUserOrders = async (req, res) => {
   }
 };
 
-// 🛑 4. CANCEL ORDER & INITIATE REFUND
 const cancelAndRefundOrder = async (req, res) => {
   try {
     const { orderId } = req.body;
@@ -143,11 +136,9 @@ const cancelAndRefundOrder = async (req, res) => {
   }
 };
 
-// 🚀 5. THE MISSING FIX: GET PROVIDER (COOK) ORDERS
 const getProviderOrders = async (req, res) => {
   try {
     const providerId = req.params.providerId;
-    
     const orders = await Order.find({ provider: providerId })
                               .populate('user', 'name email')
                               .sort({ createdAt: -1 });
@@ -159,7 +150,6 @@ const getProviderOrders = async (req, res) => {
   }
 };
 
-// ✅ Sahi Export (getProviderOrders add kar diya gaya hai)
 module.exports = { 
   createOrder, 
   verifyPayment,
