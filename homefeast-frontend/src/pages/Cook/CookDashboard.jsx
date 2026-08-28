@@ -7,7 +7,7 @@ const CookDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth(); 
   
-  const [activeTab, setActiveTab] = useState('menu'); 
+  const [activeTab, setActiveTab] = useState('orders'); // 🚀 FIX: Default 'orders' tab khulega
   
   const [dishes, setDishes] = useState([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
@@ -98,10 +98,9 @@ const CookDashboard = () => {
   // Fetch Real Live Orders & Payout Calculations
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!cookId) return; // Cook ID zaroori hai
+      if (!cookId) return; 
 
       try {
-        // 🚀 FIX: URL update kiya gaya hai jo backend ke naye route se match karega!
         const response = await fetch(`https://homefeast-fullstack.onrender.com/api/payment/provider-orders/${cookId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -110,12 +109,15 @@ const CookDashboard = () => {
           const data = await response.json();
           setActiveOrders(data);
 
-          // 🟢 Calculate Real Payouts from Real Completed Orders
-          const completedOrders = data.filter(o => o.status === 'Delivered' || o.status === 'Ready');
+          // 🚀 FIX: orderStatus check for payout calculation
+          const completedOrders = data.filter(o => {
+            const s = o.orderStatus || o.status;
+            return s === 'Delivered' || s === 'Ready';
+          });
           const totalLifeRev = completedOrders.reduce((sum, o) => sum + (o.totalAmount || o.total || 0), 0);
           
           setPayoutData({
-            availableBalance: Math.round(totalLifeRev * 0.9), // After 10% commission
+            availableBalance: Math.round(totalLifeRev * 0.9), 
             lifetimeRevenue: totalLifeRev,
             settlements: completedOrders.map(o => ({
               id: `SET-${o._id.slice(-6).toUpperCase()}`,
@@ -183,11 +185,13 @@ const CookDashboard = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ status: newStatus })
+        // 🚀 FIX: Backend ko dono variables bheje taaki order perfectly update ho!
+        body: JSON.stringify({ status: newStatus, orderStatus: newStatus })
       });
 
       if (response.ok) {
-        setActiveOrders(prev => prev.map(order => order._id === orderId ? { ...order, status: newStatus } : order));
+        // 🚀 FIX: UI ko turant update karne ke liye dono state values change kiye!
+        setActiveOrders(prev => prev.map(order => order._id === orderId ? { ...order, status: newStatus, orderStatus: newStatus } : order));
         toast.success(`Order marked as ${newStatus}! 🔥`, {
           style: { background: '#F4B942', color: '#080D12', fontWeight: 'bold' }
         });
@@ -309,62 +313,69 @@ const CookDashboard = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {activeOrders.map((order) => (
-                  <div key={order._id} className={`bg-[#111827] rounded-3xl border overflow-hidden shadow-xl flex flex-col transition-all duration-300 ${order.status === 'New' || order.status === 'Pending' || order.status === 'Placed' ? 'border-[#F4B942] shadow-[0_0_20px_rgba(244,185,66,0.15)]' : 'border-[#263241]'}`}>
-                    <div className={`px-6 py-4 border-b flex justify-between items-center ${order.status === 'New' || order.status === 'Pending' || order.status === 'Placed' ? 'bg-[#F4B942]/10 border-[#F4B942]/20' : 'bg-[#1E293B]/30 border-[#263241]'}`}>
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-[#94A3B8] mb-1">
-                          {order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : "Just Now"}
-                        </p>
-                        <h3 className="text-lg font-black text-[#F8FAFC]">#{order._id.slice(-6).toUpperCase()}</h3>
-                      </div>
-                      <div className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 ${
-                        order.status === 'New' || order.status === 'Pending' || order.status === 'Placed' ? 'bg-[#F4B942] text-[#080D12]' : 
-                        order.status === 'Preparing' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' : 
-                        'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30'
-                      }`}>
-                        {(order.status === 'New' || order.status === 'Pending' || order.status === 'Placed') && <span className="w-1.5 h-1.5 rounded-full bg-[#080D12] animate-ping"></span>}
-                        {order.status || 'Pending'}
-                      </div>
-                    </div>
-                    <div className="p-6 flex-1 flex flex-col">
-                      <p className="text-[#64748B] text-sm font-medium mb-4 flex items-center gap-2">
-                        <span>👤</span> Customer: <span className="text-[#F8FAFC] font-bold">{order.user?.name || order.customerName || 'Guest User'}</span>
-                      </p>
-                      <div className="space-y-3 mb-6 flex-1">
-                        {order.items?.map((item, idx) => (
-                          <div key={idx} className="flex justify-between items-center p-3 bg-[#080D12] rounded-xl border border-[#263241]">
-                            <div className="flex items-center gap-3">
-                              <span className="w-6 h-6 flex items-center justify-center bg-[#1E293B] text-[#F8FAFC] text-xs font-black rounded-md">{item.quantity}x</span>
-                              <span className="font-bold text-[#F8FAFC] text-sm">{item.dish?.name || item.name}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="border-t border-[#263241] pt-4 flex items-center justify-between mt-auto">
+                {activeOrders.map((order) => {
+                  
+                  // 🚀 THE ULTIMATE FIX: Dynamically checking correct status field
+                  const currentStatus = order.orderStatus || order.status || 'Pending';
+
+                  return (
+                    <div key={order._id} className={`bg-[#111827] rounded-3xl border overflow-hidden shadow-xl flex flex-col transition-all duration-300 ${['New', 'Pending', 'Placed'].includes(currentStatus) ? 'border-[#F4B942] shadow-[0_0_20px_rgba(244,185,66,0.15)]' : 'border-[#263241]'}`}>
+                      <div className={`px-6 py-4 border-b flex justify-between items-center ${['New', 'Pending', 'Placed'].includes(currentStatus) ? 'bg-[#F4B942]/10 border-[#F4B942]/20' : 'bg-[#1E293B]/30 border-[#263241]'}`}>
                         <div>
-                          <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-0.5">Order Value</p>
-                          <p className="text-xl font-black text-[#10B981]">₹{order.totalAmount || order.total || 0}</p>
+                          <p className="text-xs font-bold uppercase tracking-widest text-[#94A3B8] mb-1">
+                            {order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : "Just Now"}
+                          </p>
+                          <h3 className="text-lg font-black text-[#F8FAFC]">#{order._id.slice(-6).toUpperCase()}</h3>
                         </div>
-                        <div className="flex gap-2">
-                          {(order.status === 'New' || order.status === 'Pending' || order.status === 'Placed') && (
-                            <button onClick={() => updateOrderStatus(order._id, 'Preparing')} className="px-5 py-2.5 bg-[#F4B942] text-[#080D12] font-black rounded-xl hover:bg-[#D9A02E] transition-all shadow-[0_0_15px_rgba(244,185,66,0.3)] transform hover:-translate-y-0.5 text-sm uppercase tracking-wider">
-                              Accept & Prepare
-                            </button>
-                          )}
-                          {order.status === 'Preparing' && (
-                            <button onClick={() => updateOrderStatus(order._id, 'Ready')} className="px-5 py-2.5 bg-[#10B981] text-[#080D12] font-black rounded-xl hover:bg-[#059669] transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] transform hover:-translate-y-0.5 text-sm uppercase tracking-wider">
-                              Mark Ready ✔️
-                            </button>
-                          )}
-                          {order.status === 'Ready' && (
-                            <span className="px-4 py-2 text-[#64748B] font-bold text-sm italic">Waiting for pickup...</span>
-                          )}
+                        <div className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 ${
+                          ['New', 'Pending', 'Placed'].includes(currentStatus) ? 'bg-[#F4B942] text-[#080D12]' : 
+                          currentStatus === 'Preparing' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' : 
+                          'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30'
+                        }`}>
+                          {['New', 'Pending', 'Placed'].includes(currentStatus) && <span className="w-1.5 h-1.5 rounded-full bg-[#080D12] animate-ping"></span>}
+                          {currentStatus}
+                        </div>
+                      </div>
+                      <div className="p-6 flex-1 flex flex-col">
+                        <p className="text-[#64748B] text-sm font-medium mb-4 flex items-center gap-2">
+                          <span>👤</span> Customer: <span className="text-[#F8FAFC] font-bold">{order.user?.name || order.customerName || 'Guest User'}</span>
+                        </p>
+                        <div className="space-y-3 mb-6 flex-1">
+                          {order.items?.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-center p-3 bg-[#080D12] rounded-xl border border-[#263241]">
+                              <div className="flex items-center gap-3">
+                                <span className="w-6 h-6 flex items-center justify-center bg-[#1E293B] text-[#F8FAFC] text-xs font-black rounded-md">{item.quantity}x</span>
+                                <span className="font-bold text-[#F8FAFC] text-sm">{item.dish?.name || item.name}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="border-t border-[#263241] pt-4 flex items-center justify-between mt-auto">
+                          <div>
+                            <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-0.5">Order Value</p>
+                            <p className="text-xl font-black text-[#10B981]">₹{order.totalAmount || order.total || 0}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            {/* 🚀 THE FIXED BUTTONS SHOW UP HERE */}
+                            {['New', 'Pending', 'Placed'].includes(currentStatus) && (
+                              <button onClick={() => updateOrderStatus(order._id, 'Preparing')} className="px-5 py-2.5 bg-[#F4B942] text-[#080D12] font-black rounded-xl hover:bg-[#D9A02E] transition-all shadow-[0_0_15px_rgba(244,185,66,0.3)] transform hover:-translate-y-0.5 text-sm uppercase tracking-wider">
+                                Accept & Prepare
+                              </button>
+                            )}
+                            {currentStatus === 'Preparing' && (
+                              <button onClick={() => updateOrderStatus(order._id, 'Ready')} className="px-5 py-2.5 bg-[#10B981] text-[#080D12] font-black rounded-xl hover:bg-[#059669] transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] transform hover:-translate-y-0.5 text-sm uppercase tracking-wider">
+                                Mark Ready ✔️
+                              </button>
+                            )}
+                            {currentStatus === 'Ready' && (
+                              <span className="px-4 py-2 text-[#64748B] font-bold text-sm italic">Waiting for pickup...</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -520,7 +531,7 @@ const CookDashboard = () => {
           </div>
         )}
 
-        {/* ==================== 📈 PAYOUTS TAB (REAL DATA CONNECTED) ==================== */}
+        {/* ==================== 📈 PAYOUTS TAB ==================== */}
         {activeTab === 'payouts' && (
           <div className="relative z-10 animate-fade-in-up">
             
