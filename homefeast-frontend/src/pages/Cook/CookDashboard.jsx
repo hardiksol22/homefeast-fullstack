@@ -7,7 +7,7 @@ const CookDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth(); 
   
-  const [activeTab, setActiveTab] = useState('orders'); // 🚀 FIX: Default 'orders' tab khulega
+  const [activeTab, setActiveTab] = useState('orders'); 
   
   const [dishes, setDishes] = useState([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
@@ -31,7 +31,7 @@ const CookDashboard = () => {
   const userRole = user?.role || user?.user?.role;
   const cookId = user?._id || user?.user?._id;
   const token = user?.token || user?.user?.token;
-  const kitchenName = user?.kitchenName || user?.user?.kitchenName || "Maa ka Pyar";
+  const kitchenName = user?.kitchenName || user?.user?.kitchenName || "Masterchef";
   const chefName = user?.name || user?.user?.name || "Chef";
   const chefEmail = user?.email || user?.user?.email || "chef@homefeast.com";
 
@@ -109,7 +109,6 @@ const CookDashboard = () => {
           const data = await response.json();
           setActiveOrders(data);
 
-          // 🚀 FIX: orderStatus check for payout calculation
           const completedOrders = data.filter(o => {
             const s = o.orderStatus || o.status;
             return s === 'Delivered' || s === 'Ready';
@@ -185,12 +184,10 @@ const CookDashboard = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        // 🚀 FIX: Backend ko dono variables bheje taaki order perfectly update ho!
         body: JSON.stringify({ status: newStatus, orderStatus: newStatus })
       });
 
       if (response.ok) {
-        // 🚀 FIX: UI ko turant update karne ke liye dono state values change kiye!
         setActiveOrders(prev => prev.map(order => order._id === orderId ? { ...order, status: newStatus, orderStatus: newStatus } : order));
         toast.success(`Order marked as ${newStatus}! 🔥`, {
           style: { background: '#F4B942', color: '#080D12', fontWeight: 'bold' }
@@ -315,7 +312,6 @@ const CookDashboard = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {activeOrders.map((order) => {
                   
-                  // 🚀 THE ULTIMATE FIX: Dynamically checking correct status field
                   const currentStatus = order.orderStatus || order.status || 'Pending';
 
                   return (
@@ -330,7 +326,8 @@ const CookDashboard = () => {
                         <div className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 ${
                           ['New', 'Pending', 'Placed'].includes(currentStatus) ? 'bg-[#F4B942] text-[#080D12]' : 
                           currentStatus === 'Preparing' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' : 
-                          'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30'
+                          currentStatus === 'Delivered' ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30' :
+                          'bg-[#3B82F6]/20 text-[#3B82F6] border border-[#3B82F6]/30' // Ready color
                         }`}>
                           {['New', 'Pending', 'Placed'].includes(currentStatus) && <span className="w-1.5 h-1.5 rounded-full bg-[#080D12] animate-ping"></span>}
                           {currentStatus}
@@ -355,22 +352,37 @@ const CookDashboard = () => {
                             <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mb-0.5">Order Value</p>
                             <p className="text-xl font-black text-[#10B981]">₹{order.totalAmount || order.total || 0}</p>
                           </div>
-                          <div className="flex gap-2">
-                            {/* 🚀 THE FIXED BUTTONS SHOW UP HERE */}
+                          
+                          {/* 🚀 THE FIXED BUTTONS SHOW UP HERE */}
+                          <div className="flex gap-2 items-center">
                             {['New', 'Pending', 'Placed'].includes(currentStatus) && (
                               <button onClick={() => updateOrderStatus(order._id, 'Preparing')} className="px-5 py-2.5 bg-[#F4B942] text-[#080D12] font-black rounded-xl hover:bg-[#D9A02E] transition-all shadow-[0_0_15px_rgba(244,185,66,0.3)] transform hover:-translate-y-0.5 text-sm uppercase tracking-wider">
                                 Accept & Prepare
                               </button>
                             )}
+                            
                             {currentStatus === 'Preparing' && (
                               <button onClick={() => updateOrderStatus(order._id, 'Ready')} className="px-5 py-2.5 bg-[#10B981] text-[#080D12] font-black rounded-xl hover:bg-[#059669] transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] transform hover:-translate-y-0.5 text-sm uppercase tracking-wider">
                                 Mark Ready ✔️
                               </button>
                             )}
+                            
                             {currentStatus === 'Ready' && (
-                              <span className="px-4 py-2 text-[#64748B] font-bold text-sm italic">Waiting for pickup...</span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[#64748B] font-bold text-xs italic hidden sm:block">Waiting for pickup...</span>
+                                <button onClick={() => updateOrderStatus(order._id, 'Delivered')} className="px-5 py-2.5 bg-[#3B82F6] text-[#F8FAFC] font-black rounded-xl hover:bg-[#2563EB] transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] transform hover:-translate-y-0.5 text-sm uppercase tracking-wider">
+                                  Mark Delivered 🛵
+                                </button>
+                              </div>
+                            )}
+
+                            {currentStatus === 'Delivered' && (
+                              <span className="px-4 py-2 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30 font-black text-sm uppercase tracking-wider rounded-xl">
+                                Order Completed 🎉
+                              </span>
                             )}
                           </div>
+
                         </div>
                       </div>
                     </div>
