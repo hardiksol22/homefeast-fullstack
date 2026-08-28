@@ -6,9 +6,10 @@ exports.createOrder = async (req, res) => {
   try {
     const { cookId, plan, totalAmount, deliveryAddress } = req.body;
     
+    // 🚀 FIX: Naye Schema ke according 'user' aur 'provider' ko map kiya
     const newOrder = new Order({
-      customer: req.user.userId, // JWT Token se customer ID milega
-      cook: cookId,
+      user: req.user.userId || req.user._id || req.user.id, 
+      provider: cookId,
       plan,
       totalAmount,
       deliveryAddress
@@ -27,17 +28,18 @@ exports.createOrder = async (req, res) => {
 exports.getMyOrders = async (req, res) => {
   try {
     let orders;
+    const userId = req.user.userId || req.user._id || req.user.id;
     
-    // Agar user Customer hai, toh uski kharidi hui subscriptions dikhao
+    // Agar user Customer hai
     if (req.user.role === 'customer') {
-      orders = await Order.find({ customer: req.user.userId })
-        .populate('cook', 'name') // Cook ka naam fetch karne ke liye
+      orders = await Order.find({ user: userId })
+        .populate('provider', 'name') // 🚀 FIX: 'cook' ki jagah 'provider' ko populate kiya
         .sort({ createdAt: -1 });
     } 
-    // Agar user Cook hai, toh usko aaye hue customers ke orders dikhao
+    // Agar user Cook hai
     else if (req.user.role === 'cook') {
-      orders = await Order.find({ cook: req.user.userId })
-        .populate('customer', 'name email') // Customer ka naam aur email
+      orders = await Order.find({ provider: userId }) // 🚀 FIX: 'cook' ki jagah 'provider' filter lagaya
+        .populate('user', 'name email') 
         .sort({ createdAt: -1 });
     } 
     else {
@@ -55,18 +57,31 @@ exports.getMyOrders = async (req, res) => {
 // @desc    Update order status (Cook or Admin only)
 exports.updateOrderStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    // 🚀 FIX: Frontend dono variables bhej raha hai (status aur orderStatus)
+    const { status, orderStatus } = req.body; 
     const orderId = req.params.id;
     
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: 'Order not found' });
     
-    // Check karein ki kya current user is order ka cook hai ya admin hai
-    if (req.user.role !== 'admin' && order.cook.toString() !== req.user.userId) {
+    // 🚀 FIX: Security check mein order.cook ki jagah order.provider use kiya (Taki server crash na ho)
+    const currentUserId = req.user.userId || req.user._id || req.user.id;
+    const providerId = order.provider ? order.provider.toString() : null;
+
+    if (req.user.role !== 'admin' && providerId && providerId !== currentUserId.toString()) {
        return res.status(403).json({ message: 'Not authorized to update this order' });
     }
 
-    order.status = status;
+    // 🚀 FIX: Database mein Schema ke exact naam 'orderStatus' ko update kiya
+    if (orderStatus) {
+      order.orderStatus = orderStatus;
+    }
+    if (status) {
+      // Dono conditions sync rakhi hain safety ke liye
+      order.status = status; 
+      order.orderStatus = status; 
+    }
+
     await order.save();
     
     res.status(200).json({ message: 'Order status updated successfully!', order });
