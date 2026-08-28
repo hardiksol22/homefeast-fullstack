@@ -36,7 +36,7 @@ const CookDashboard = () => {
   const chefEmail = user?.email || user?.user?.email || "chef@homefeast.com";
 
   // ==========================================
-  // 👥 TEAM MANAGEMENT (Real Backend Support Ready)
+  // 👥 TEAM MANAGEMENT
   // ==========================================
   const [teamMembers, setTeamMembers] = useState([
     { id: 1, name: chefName, role: 'Head Culinary Specialist', experience: '8+ Years' }
@@ -69,7 +69,7 @@ const CookDashboard = () => {
   const getAvatar = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Chef')}&background=10B981&color=080D12&size=150&bold=true`;
 
   // ==========================================
-  // 📡 REAL API CALLS (Menu, Orders, Payouts)
+  // 📡 REAL API CALLS
   // ==========================================
   useEffect(() => {
     if (!userRole || userRole !== 'cook') {
@@ -95,7 +95,6 @@ const CookDashboard = () => {
     if (cookId) fetchMyMenu();
   }, [userRole, cookId, navigate]);
 
-  // Fetch Real Live Orders & Payout Calculations
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!cookId) return; 
@@ -143,7 +142,6 @@ const CookDashboard = () => {
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // 🚀 ADD NEW DISH (Real API)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setAddingDish(true);
@@ -175,7 +173,6 @@ const CookDashboard = () => {
     }
   };
 
-  // 🔄 UPDATE ORDER STATUS (Real API)
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       const response = await fetch(`https://homefeast-fullstack.onrender.com/api/orders/${orderId}/status`, {
@@ -200,6 +197,12 @@ const CookDashboard = () => {
     }
   };
 
+  // 🚀 FIX: Ab yahan sirf "Live" orders filter karke nikalenge jinka status Delivered ya Cancelled nahi hai
+  const liveOrders = activeOrders.filter(order => {
+    const s = order.orderStatus || order.status;
+    return !['Delivered', 'Cancelled'].includes(s);
+  });
+
   const todaysRevenue = activeOrders.reduce((total, order) => total + (order.totalAmount || order.total || 0), 0);
 
   return (
@@ -220,7 +223,8 @@ const CookDashboard = () => {
             className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'orders' ? 'bg-[#F4B942]/10 text-[#F4B942] border border-[#F4B942]/20 shadow-[0_0_15px_rgba(244,185,66,0.1)]' : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border border-transparent'}`}
           >
             <span className="flex items-center gap-3">📦 Live Orders</span>
-            {activeOrders.length > 0 && <span className="w-5 h-5 bg-[#F4B942] text-[#080D12] rounded-full text-xs flex items-center justify-center font-black animate-pulse">{activeOrders.length}</span>}
+            {/* 🚀 FIX: Badge mein liveOrders ka count dikhaya */}
+            {liveOrders.length > 0 && <span className="w-5 h-5 bg-[#F4B942] text-[#080D12] rounded-full text-xs flex items-center justify-center font-black animate-pulse">{liveOrders.length}</span>}
           </button>
 
           <button 
@@ -274,7 +278,8 @@ const CookDashboard = () => {
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl bg-[#F4B942]/10 text-[#F4B942] relative z-10">🔥</div>
             <div className="relative z-10">
               <p className="text-[#94A3B8] text-xs font-bold uppercase tracking-widest mb-1">Active Orders</p>
-              <h3 className="text-3xl font-black text-[#F8FAFC]">{loadingOrders ? '-' : activeOrders.length}</h3>
+              {/* 🚀 FIX: Top card mein liveOrders ka count dikhaya */}
+              <h3 className="text-3xl font-black text-[#F8FAFC]">{loadingOrders ? '-' : liveOrders.length}</h3>
             </div>
           </div>
           <div className="bg-[#111827] border border-[#263241] p-6 rounded-3xl flex items-center gap-5 shadow-lg relative overflow-hidden">
@@ -300,9 +305,10 @@ const CookDashboard = () => {
               <span className="w-10 h-10 rounded-xl bg-[#F4B942]/10 text-[#F4B942] flex items-center justify-center border border-[#F4B942]/20">🚨</span>
               Live Kitchen Ticket 
             </h2>
+            {/* 🚀 FIX: List render karne ke liye sirf liveOrders ka use kiya */}
             {loadingOrders ? (
               <div className="text-center py-12 text-[#94A3B8]">Loading live orders...</div>
-            ) : activeOrders.length === 0 ? (
+            ) : liveOrders.length === 0 ? (
               <div className="bg-[#111827]/80 backdrop-blur-xl border border-[#263241] rounded-[32px] p-16 text-center shadow-xl">
                 <span className="text-6xl mb-6 opacity-60 block">😴</span>
                 <h3 className="text-2xl font-black text-[#F8FAFC] mb-2">No Active Orders</h3>
@@ -310,7 +316,7 @@ const CookDashboard = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {activeOrders.map((order) => {
+                {liveOrders.map((order) => {
                   
                   const currentStatus = order.orderStatus || order.status || 'Pending';
 
@@ -327,7 +333,7 @@ const CookDashboard = () => {
                           ['New', 'Pending', 'Placed'].includes(currentStatus) ? 'bg-[#F4B942] text-[#080D12]' : 
                           currentStatus === 'Preparing' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' : 
                           currentStatus === 'Delivered' ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30' :
-                          'bg-[#3B82F6]/20 text-[#3B82F6] border border-[#3B82F6]/30' // Ready color
+                          'bg-[#3B82F6]/20 text-[#3B82F6] border border-[#3B82F6]/30'
                         }`}>
                           {['New', 'Pending', 'Placed'].includes(currentStatus) && <span className="w-1.5 h-1.5 rounded-full bg-[#080D12] animate-ping"></span>}
                           {currentStatus}
@@ -353,7 +359,6 @@ const CookDashboard = () => {
                             <p className="text-xl font-black text-[#10B981]">₹{order.totalAmount || order.total || 0}</p>
                           </div>
                           
-                          {/* 🚀 THE FIXED BUTTONS SHOW UP HERE */}
                           <div className="flex gap-2 items-center">
                             {['New', 'Pending', 'Placed'].includes(currentStatus) && (
                               <button onClick={() => updateOrderStatus(order._id, 'Preparing')} className="px-5 py-2.5 bg-[#F4B942] text-[#080D12] font-black rounded-xl hover:bg-[#D9A02E] transition-all shadow-[0_0_15px_rgba(244,185,66,0.3)] transform hover:-translate-y-0.5 text-sm uppercase tracking-wider">
