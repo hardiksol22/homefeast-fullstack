@@ -6,6 +6,12 @@ const orderSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  // 🚀 THE FIX: Mongoose ko ab Cook (Provider) ki ID save karni aati hai!
+  provider: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User', 
+    default: null
+  },
   items: [{
     name: { type: String, required: true },
     price: { type: Number, required: true },
@@ -32,5 +38,4 @@ const orderSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// ✅ Sahi Export (Yahan sirf database model jayega)
 module.exports = mongoose.model('Order', orderSchema);
